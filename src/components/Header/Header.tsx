@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './Header.module.css';
 
-export default function Header() {
+export default function Header({ shortName = 'CV Yard Works' }: { shortName?: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Split short name into accent (first word) and rest so the logo retains its styling.
+  const [accent, ...restWords] = shortName.split(/\s+/);
+  const rest = restWords.join(' ');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,7 +27,7 @@ export default function Header() {
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <div className={styles.container}>
         <Link href="/" className={styles.logo} onClick={closeMenu}>
-          <span className={styles.logoAccent}>CV</span> Yard Works
+          <span className={styles.logoAccent}>{accent}</span>{rest ? ` ${rest}` : ''}
         </Link>
 
         <button

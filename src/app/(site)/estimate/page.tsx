@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import ContactForm from '@/components/ContactForm/ContactForm';
 import styles from './page.module.css';
+import { fetchContent } from '@/lib/supabase/fetchContent';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Free Estimate | Connecticut Valley Yard Works',
@@ -8,18 +11,39 @@ export const metadata: Metadata = {
     'Request a free estimate for landscaping, lawn care, or snow removal services in the Connecticut Valley region.',
 };
 
-export default function EstimatePage() {
+const DEFAULT = {
+  heading: 'Free',
+  headingAccent: 'Estimate',
+  subtitle:
+    "Tell us about your project and we'll get back to you with a free, no-obligation estimate within 24 hours.",
+  benefits: [
+    'Locally owned & operated',
+    'Year-round services',
+    'Free estimates',
+    'Reliable & professional',
+    'Residential & commercial',
+  ],
+};
+
+export default async function EstimatePage() {
+  const { estimate_page, site_settings } = await fetchContent([
+    'estimate_page',
+    'site_settings',
+  ]);
+  const c = estimate_page ?? DEFAULT;
+  const phone = site_settings?.phone ?? '(603) 499-6799';
+  const phoneTel = site_settings?.phoneTel ?? '6034996799';
+  const location = site_settings?.location ?? 'Walpole, NH';
+  const serviceArea = site_settings?.serviceArea ?? 'Connecticut Valley Region';
+
   return (
     <section className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className="section-heading">
-            Free <span>Estimate</span>
+            {c.heading} <span>{c.headingAccent}</span>
           </h1>
-          <p className="section-subtitle">
-            Tell us about your project and we&apos;ll get back to you with a free,
-            no-obligation estimate within 24 hours.
-          </p>
+          <p className="section-subtitle">{c.subtitle}</p>
         </div>
 
         <div className={styles.grid}>
@@ -30,26 +54,24 @@ export default function EstimatePage() {
               <h3>Get in Touch</h3>
               <div className={styles.infoItem}>
                 <strong>Phone</strong>
-                <a href="tel:6034996799">(603) 499-6799</a>
+                <a href={`tel:${phoneTel}`}>{phone}</a>
               </div>
               <div className={styles.infoItem}>
                 <strong>Location</strong>
-                <p>Walpole, NH</p>
+                <p>{location}</p>
               </div>
               <div className={styles.infoItem}>
                 <strong>Service Area</strong>
-                <p>Connecticut Valley Region</p>
+                <p>{serviceArea}</p>
               </div>
             </div>
 
             <div className={styles.infoCard}>
               <h3>Why Choose Us</h3>
               <ul className={styles.benefits}>
-                <li>Locally owned &amp; operated</li>
-                <li>Year-round services</li>
-                <li>Free estimates</li>
-                <li>Reliable &amp; professional</li>
-                <li>Residential &amp; commercial</li>
+                {c.benefits.map((b, i) => (
+                  <li key={i}>{b}</li>
+                ))}
               </ul>
             </div>
           </aside>

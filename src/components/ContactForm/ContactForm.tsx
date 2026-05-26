@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import styles from './ContactForm.module.css';
 
 interface ContactFormProps {
@@ -10,13 +11,38 @@ interface ContactFormProps {
 
 export default function ContactForm({ formType, defaultService }: ContactFormProps) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-    console.log(`${formType} form submitted:`, data);
+
+    const payload = {
+      form_type: formType,
+      name: String(formData.get('name') ?? '').trim(),
+      email: String(formData.get('email') ?? '').trim(),
+      phone: (formData.get('phone') as string) || null,
+      address: (formData.get('address') as string) || null,
+      service: (formData.get('service') as string) || null,
+      position: (formData.get('position') as string) || null,
+      message: (formData.get('message') as string) || null,
+    };
+
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.from('cvy_messages').insert(payload);
+
+    if (error) {
+      setError("Sorry — something went wrong submitting. Please try again or call us directly.");
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitted(true);
+    setSubmitting(false);
   };
 
   if (submitted) {
@@ -121,8 +147,28 @@ export default function ContactForm({ formType, defaultService }: ContactFormPro
         ></textarea>
       </div>
 
-      <button type="submit" className="btn btn-primary">
-        {formType === 'estimate' ? 'Request Estimate' : 'Submit Application'}
+      {error && (
+        <p
+          style={{
+            color: '#d97070',
+            background: 'rgba(220, 60, 60, 0.1)',
+            border: '1px solid rgba(220, 60, 60, 0.3)',
+            padding: '10px 12px',
+            borderRadius: 6,
+            fontSize: '0.88rem',
+            margin: '0 0 12px',
+          }}
+        >
+          {error}
+        </p>
+      )}
+
+      <button type="submit" className="btn btn-primary" disabled={submitting}>
+        {submitting
+          ? 'Sending…'
+          : formType === 'estimate'
+          ? 'Request Estimate'
+          : 'Submit Application'}
       </button>
     </form>
   );

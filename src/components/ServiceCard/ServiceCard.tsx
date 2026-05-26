@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import styles from './ServiceCard.module.css';
-import { Service } from '@/data/services';
+import type { Service } from '@/lib/supabase/content-types';
 
 interface ServiceCardProps {
   service: Service;

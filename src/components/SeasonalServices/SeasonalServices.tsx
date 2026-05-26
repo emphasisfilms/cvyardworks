@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import styles from './SeasonalServices.module.css';
-import { services } from '@/data/services';
+import type { Service } from '@/lib/supabase/content-types';
 
-export default function SeasonalServices() {
+export default function SeasonalServices({
+  services,
+}: {
+  services: Service[];
+}) {
   return (
     <section className={styles.section}>
       <div className={styles.container}>
