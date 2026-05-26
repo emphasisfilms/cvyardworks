@@ -1,22 +1,39 @@
 /* ========================================
-   CV Yard Works — Global Styles
+   CV Yard Works — Global Styles (light theme)
    ======================================== */
 
 :root {
-  --color-bg: #141414;
-  --color-bg-alt: #1c1c1c;
-  --color-bg-card: #222222;
-  --color-bg-dark: #0c0c0c;
-  --color-text: #d6d0c5;
-  --color-text-light: #8a8478;
-  --color-text-bright: #ede8df;
-  --color-primary: #4a7c59;
-  --color-primary-dark: #3a6347;
-  --color-secondary: #d4a017;
-  --color-secondary-dark: #b8890f;
-  --color-border: #333333;
-  --radius: 4px;
-  --radius-lg: 6px;
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-bg-alt: #f5f7f5;       /* very faint green-tinted gray for striping */
+  --color-bg-card: #ffffff;
+  --color-bg-dark: #1a1a1a;      /* footer + emphasis bands */
+
+  /* Text */
+  --color-text: #1a1a1a;
+  --color-text-bright: #0f1410;
+  --color-text-light: #6b7280;   /* secondary body */
+  --color-text-on-dark: #f5f5f5;
+  --color-text-on-dark-muted: #a8b2a8;
+
+  /* Brand */
+  --color-primary: #2f7a3e;       /* deep forest green */
+  --color-primary-dark: #245f30;
+  --color-primary-soft: #e8f1ea;  /* tinted backgrounds, hovers */
+
+  /* The old palette had a gold secondary; in the new design the green
+     handles everything. Aliased so any leftover usages keep working. */
+  --color-secondary: #2f7a3e;
+  --color-secondary-dark: #245f30;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Radii / scale */
+  --radius: 6px;
+  --radius-lg: 10px;
+  --header-h: 72px;
 }
 
 /* Reset */
@@ -37,7 +54,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-raleway), sans-serif;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -65,24 +82,23 @@ textarea {
   color: inherit;
 }
 
-/* Typography */
+/* Typography — sentence case, bold but not heavy */
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-bright);
-  font-weight: 800;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
-h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
-h2 { font-size: clamp(1.5rem, 3.5vw, 2.5rem); }
-h3 { font-size: clamp(1.2rem, 2.5vw, 1.5rem); }
+h1 { font-size: clamp(2.25rem, 5.5vw, 3.75rem); }
+h2 { font-size: clamp(1.75rem, 3.8vw, 2.5rem); }
+h3 { font-size: clamp(1.15rem, 2vw, 1.35rem); }
 
 p {
   margin-bottom: 1rem;
 }
 
-/* Utilities */
+/* Layout helpers */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -91,6 +107,7 @@ p {
 
 .section {
   padding: 100px 0;
+  background-color: var(--color-bg);
 }
 
 .section-alt {
@@ -99,6 +116,17 @@ p {
 
 .section-dark {
   background-color: var(--color-bg-dark);
+  color: var(--color-text-on-dark);
+}
+
+.section-dark h1,
+.section-dark h2,
+.section-dark h3 {
+  color: var(--color-text-on-dark);
+}
+
+.section-dark .section-subtitle {
+  color: var(--color-text-on-dark-muted);
 }
 
 .text-center {
@@ -110,73 +138,85 @@ p {
 }
 
 .accent-border-left {
-  border-left: 3px solid var(--color-secondary);
+  border-left: 3px solid var(--color-primary);
   padding-left: 20px;
 }
 
 /* Buttons */
 .btn {
   display: inline-block;
-  padding: 14px 32px;
+  padding: 12px 26px;
   border-radius: var(--radius);
-  font-weight: 700;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease, transform 0.2s ease;
+  border: 1.5px solid transparent;
   text-align: center;
+  line-height: 1.2;
 }
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: var(--color-text-bright);
+  color: #ffffff;
+  border-color: var(--color-primary);
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-dark);
-  transform: translateY(-2px);
+  border-color: var(--color-primary-dark);
 }
 
+/* Secondary: white pill with dark text on light bgs;
+   when used over the dark CTA band, the inverted contrast also works. */
 .btn-secondary {
-  background-color: transparent;
-  border-color: var(--color-secondary);
-  color: var(--color-secondary);
+  background-color: #ffffff;
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-secondary);
-  color: var(--color-bg-dark);
-  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
-/* Form Styles */
+.section-dark .btn-secondary {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.section-dark .btn-secondary:hover {
+  background-color: #ffffff;
+  color: var(--color-text);
+  border-color: #ffffff;
+}
+
+/* Forms */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--color-text-light);
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: var(--color-text);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 12px 16px;
-  background-color: var(--color-bg-dark);
-  border: 1px solid var(--color-border);
+  padding: 11px 14px;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius);
-  color: var(--color-text-bright);
+  color: var(--color-text);
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-group input:focus,
@@ -184,6 +224,7 @@ p {
 .form-group textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(47, 122, 62, 0.12);
 }
 
 .form-group textarea {
@@ -193,54 +234,61 @@ p {
 
 .form-group select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8478' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 40px;
+  background-position: right 14px center;
+  padding-right: 38px;
 }
 
-/* Grid */
+/* Grid helpers */
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
+  gap: 40px;
+  align-items: center;
 }
 
 .grid-4 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 24px;
 }
 
-/* Section heading style */
+/* Section heading */
 .section-heading {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .section-heading span {
-  color: var(--color-secondary);
+  color: var(--color-primary);
+}
+
+.section-dark .section-heading span {
+  color: #8ed18a;
 }
 
 .section-subtitle {
   color: var(--color-text-light);
-  font-size: 1.1rem;
-  margin-bottom: 50px;
-  max-width: 600px;
+  font-size: 1.05rem;
+  margin-bottom: 44px;
+  max-width: 620px;
 }
 
 .section-subtitle.centered {
   margin-left: auto;
   margin-right: auto;
+  text-align: center;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .section {
-    padding: 60px 0;
+    padding: 64px 0;
   }
 
   .grid-2 {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 
   .grid-4 {

@@ -4,17 +4,17 @@
   left: 0;
   right: 0;
   z-index: 1000;
-  padding: 20px 0;
-  transition: all 0.3s ease;
-  background-color: transparent;
+  background-color: #ffffff;
+  border-bottom: 1px solid transparent;
+  padding: 16px 0;
+  transition: padding 0.2s ease, box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .header.scrolled {
-  background-color: rgba(12, 12, 12, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: 10px 0;
+  border-bottom-color: var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .container {
@@ -27,12 +27,11 @@
 }
 
 .logo {
-  font-size: 1.4rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-text-bright);
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
 .logoAccent {
@@ -42,32 +41,30 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 28px;
 }
 
 .navLink {
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  font-size: 0.95rem;
+  font-weight: 500;
   color: var(--color-text);
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
   position: relative;
 }
 
 .navLink::after {
   content: '';
   position: absolute;
-  bottom: -4px;
+  bottom: -6px;
   left: 0;
   width: 0;
   height: 2px;
-  background-color: var(--color-secondary);
-  transition: width 0.3s ease;
+  background-color: var(--color-primary);
+  transition: width 0.2s ease;
 }
 
 .navLink:hover {
-  color: var(--color-text-bright);
+  color: var(--color-primary);
 }
 
 .navLink:hover::after {
@@ -75,8 +72,8 @@
 }
 
 .navCta {
-  padding: 10px 24px;
-  font-size: 0.8rem;
+  padding: 9px 20px;
+  font-size: 0.9rem;
 }
 
 /* Hamburger */
@@ -95,7 +92,7 @@
   display: block;
   width: 24px;
   height: 2px;
-  background-color: var(--color-text-bright);
+  background-color: var(--color-text);
   transition: all 0.3s ease;
 }
 
@@ -122,13 +119,14 @@
     right: -100%;
     width: 280px;
     height: 100vh;
-    background-color: var(--color-bg-dark);
+    background-color: #ffffff;
     flex-direction: column;
     justify-content: center;
     gap: 24px;
     padding: 40px;
     transition: right 0.3s ease;
     border-left: 1px solid var(--color-border);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.06);
   }
 
   .navOpen {
@@ -136,7 +134,7 @@
   }
 
   .navLink {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 
   .navCta {

@@ -1,7 +1,7 @@
 .footer {
   background-color: var(--color-bg-dark);
-  border-top: 3px solid var(--color-primary);
-  padding: 80px 0 0;
+  color: var(--color-text-on-dark);
+  padding: 72px 0 0;
 }
 
 .container {
@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   gap: 60px;
-  padding-bottom: 60px;
+  padding-bottom: 48px;
 }
 
 .brand {
@@ -23,50 +23,51 @@
 
 .logo {
   font-size: 1.3rem;
-  letter-spacing: 2px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
   margin-bottom: 8px;
 }
 
 .logoAccent {
-  color: var(--color-primary);
+  color: #8ed18a;
 }
 
 .tagline {
-  color: var(--color-secondary);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-size: 0.85rem;
-  margin-bottom: 16px;
+  color: #8ed18a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 14px;
 }
 
 .description {
-  color: var(--color-text-light);
+  color: var(--color-text-on-dark-muted);
   font-size: 0.95rem;
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .heading {
-  font-size: 0.85rem;
-  letter-spacing: 2px;
-  margin-bottom: 20px;
-  color: var(--color-text-bright);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #ffffff;
+  letter-spacing: 0;
 }
 
 .links nav {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .link {
-  color: var(--color-text-light);
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
+  color: var(--color-text-on-dark-muted);
+  font-size: 0.92rem;
+  transition: color 0.2s ease;
 }
 
 .link:hover {
-  color: var(--color-secondary);
+  color: #ffffff;
 }
 
 .contact {
@@ -75,26 +76,28 @@
 }
 
 .contactItem {
-  color: var(--color-text-light);
-  font-size: 0.9rem;
-  margin-bottom: 10px;
+  color: var(--color-text-on-dark-muted);
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 
 .contactItem strong {
-  color: var(--color-text);
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .contactItem a {
-  color: var(--color-secondary);
-  transition: color 0.3s ease;
+  color: #ffffff;
+  transition: color 0.2s ease;
 }
 
 .contactItem a:hover {
-  color: var(--color-secondary-dark);
+  color: #8ed18a;
 }
 
 .bottom {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: 24px 0;
   display: flex;
   align-items: center;
@@ -104,26 +107,26 @@
 }
 
 .bottom p {
-  color: var(--color-text-light);
-  font-size: 0.8rem;
+  color: var(--color-text-on-dark-muted);
+  font-size: 0.82rem;
   margin: 0;
 }
 
 .admin {
   font-size: 0.65rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.25);
   text-decoration: none;
   transition: color 0.3s;
 }
 
 .admin:hover {
-  color: var(--color-text-light);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 36px;
   }
 
   .brand {

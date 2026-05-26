@@ -90,10 +90,10 @@ export default async function Home() {
             </div>
             <div
               style={{
-                background: 'var(--color-bg-card)',
+                background: 'var(--color-bg-alt)',
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--color-border)',
-                minHeight: '300px',
+                minHeight: '340px',
                 position: 'relative',
                 overflow: 'hidden',
                 display: aboutImageUrl ? 'block' : 'flex',
@@ -101,8 +101,6 @@ export default async function Home() {
                 justifyContent: 'center',
                 color: 'var(--color-text-light)',
                 fontSize: '0.9rem',
-                textTransform: 'uppercase' as const,
-                letterSpacing: '2px',
               }}
             >
               {aboutImageUrl ? (
