@@ -96,13 +96,28 @@
 .bottom {
   border-top: 1px solid var(--color-border);
   padding: 24px 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .bottom p {
   color: var(--color-text-light);
   font-size: 0.8rem;
   margin: 0;
+}
+
+.admin {
+  font-size: 0.65rem;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.admin:hover {
+  color: var(--color-text-light);
 }
 
 @media (max-width: 768px) {

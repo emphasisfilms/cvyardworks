@@ -68,6 +68,7 @@ export default function Footer({
 
         <div className={styles.bottom}>
           <p>&copy; {new Date().getFullYear()} {settings.businessName}. All rights reserved.</p>
+          <Link href="/admin/login" className={styles.admin}>Admin Login</Link>
         </div>
       </div>
     </footer>
