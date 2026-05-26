@@ -16,17 +16,17 @@
   text-align: center;
 }
 
-.grid {
+.infoGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 24px;
+  margin-bottom: 48px;
   align-items: start;
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
+.formWrap {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .card {
@@ -98,7 +98,7 @@
 }
 
 @media (max-width: 768px) {
-  .grid {
+  .infoGrid {
     grid-template-columns: 1fr;
   }
 }

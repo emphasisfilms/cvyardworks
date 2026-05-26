@@ -109,3 +109,74 @@ export interface Service {
   photo_path: string | null;
   sort_order: number;
 }
+
+// Full hire application payload — stored in cvy_messages.application_data
+// when form_type = 'careers'. Keep keys stable so admin view can render them.
+
+export interface ApplicationReference {
+  name: string;
+  company: string;
+  phone: string;
+  address: string;
+}
+
+export interface ApplicationPreviousEmployment {
+  company: string;
+  phone: string;
+  address: string;
+  startingSalary: string;
+  endingSalary: string;
+  startDate: string;
+  endDate: string;
+  jobTitle: string;
+  reasonForLeaving: string;
+}
+
+export interface ApplicationEducationEntry {
+  name: string;
+  start: string;
+  finish: string;
+  graduated: boolean;
+}
+
+export interface CareersApplication {
+  applicant: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+    age: string;
+    dateAvailable: string;
+    desiredPosition: string;
+    usCitizen: boolean;
+    convictedCrime: boolean;
+    crimeDetails: string;
+  };
+  driversLicense: {
+    hasLicense: boolean;
+    hasCdl: boolean;
+    licenseState: string;
+    primaryTransportation: string;
+    accidents3yr: string;
+    violations3yr: string;
+  };
+  education: {
+    highSchool: ApplicationEducationEntry;
+    college: ApplicationEducationEntry;
+    other: string;
+  };
+  references: ApplicationReference[];
+  previousEmployment: ApplicationPreviousEmployment[];
+  military: {
+    served: boolean;
+    startDate: string;
+    endDate: string;
+    branch: string;
+    rank: string;
+    dischargeType: string;
+  };
+  certification: {
+    certified: boolean;
+    signature: string;
+  };
+}

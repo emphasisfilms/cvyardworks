@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ContactForm from '@/components/ContactForm/ContactForm';
+import HireForm from '@/components/HireForm/HireForm';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
 
@@ -43,37 +43,35 @@ export default async function CareersPage() {
           <p className="section-subtitle">{c.subtitle}</p>
         </div>
 
-        <div className={styles.grid}>
-          <div className={styles.info}>
-            <div className={styles.card}>
-              <h3>Why Work With Us</h3>
-              <ul className={styles.perks}>
-                {c.perks.map((perk, i) => (
-                  <li key={i}>
-                    <strong>{perk.title}</strong>
-                    <p>{perk.body}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className={styles.card}>
-              <h3>Open Positions</h3>
-              <div className={styles.positions}>
-                {c.positions.map((pos, i) => (
-                  <div key={i} className={styles.position}>
-                    <strong>{pos.title}</strong>
-                    <p>{pos.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className={styles.infoGrid}>
+          <div className={styles.card}>
+            <h3>Why Work With Us</h3>
+            <ul className={styles.perks}>
+              {c.perks.map((perk, i) => (
+                <li key={i}>
+                  <strong>{perk.title}</strong>
+                  <p>{perk.body}</p>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div>
-            <h2 className={styles.formHeading}>Apply Now</h2>
-            <ContactForm formType="careers" />
+          <div className={styles.card}>
+            <h3>Open Positions</h3>
+            <div className={styles.positions}>
+              {c.positions.map((pos, i) => (
+                <div key={i} className={styles.position}>
+                  <strong>{pos.title}</strong>
+                  <p>{pos.detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
+
+        <div className={styles.formWrap}>
+          <h2 className={styles.formHeading}>Join the Team</h2>
+          <HireForm positions={c.positions} />
         </div>
       </div>
     </section>

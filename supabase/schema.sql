@@ -35,17 +35,18 @@ create table if not exists public.cvy_services (
 
 -- Contact / estimate / careers form submissions.
 create table if not exists public.cvy_messages (
-  id          uuid primary key default gen_random_uuid(),
-  form_type   text not null check (form_type in ('estimate','careers','contact')),
-  name        text not null,
-  email       text not null,
-  phone       text,
-  address     text,         -- estimate only
-  service     text,         -- estimate only
-  position    text,         -- careers only
-  message     text,
-  is_read     boolean not null default false,
-  created_at  timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  form_type         text not null check (form_type in ('estimate','careers','contact')),
+  name              text not null,
+  email             text not null,
+  phone             text,
+  address           text,         -- estimate only
+  service           text,         -- estimate only
+  position          text,         -- careers only
+  message           text,
+  application_data  jsonb,        -- careers only: full hire application
+  is_read           boolean not null default false,
+  created_at        timestamptz not null default now()
 );
 
 create index if not exists cvy_messages_created_at_idx on public.cvy_messages (created_at desc);

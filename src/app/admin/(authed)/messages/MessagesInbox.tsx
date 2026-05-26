@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { markReadAction, deleteMessageAction } from './actions';
+import type { CareersApplication } from '@/lib/supabase/content-types';
 
 export type MessageRow = {
   id: string;
@@ -13,6 +14,7 @@ export type MessageRow = {
   service: string | null;
   position: string | null;
   message: string | null;
+  application_data: CareersApplication | null;
   is_read: boolean;
   created_at: string;
 };
@@ -236,12 +238,14 @@ function MessageCard({
             fontSize: '0.9rem',
           }}
         >
-          {msg.address && (
+          {msg.address && !msg.application_data && (
             <DetailRow label="Property address" value={msg.address} />
           )}
           {msg.service && <DetailRow label="Service" value={msg.service} />}
-          {msg.position && <DetailRow label="Position" value={msg.position} />}
-          {msg.message && (
+          {msg.position && !msg.application_data && (
+            <DetailRow label="Position" value={msg.position} />
+          )}
+          {msg.message && !msg.application_data && (
             <div style={{ marginTop: 8 }}>
               <div
                 style={{
@@ -258,6 +262,10 @@ function MessageCard({
                 {msg.message}
               </div>
             </div>
+          )}
+
+          {msg.application_data && (
+            <ApplicationView app={msg.application_data} />
           )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
@@ -311,4 +319,200 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span style={{ color: '#e8efe9' }}>{value}</span>
     </div>
   );
+}
+
+// ============= Hire application rendering =============
+
+const sectionBoxStyle: React.CSSProperties = {
+  marginTop: 14,
+  padding: 14,
+  background: '#0f1410',
+  border: '1px solid #2a332d',
+  borderRadius: 6,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: '0.78rem',
+  textTransform: 'uppercase',
+  letterSpacing: 0.8,
+  color: '#8aa093',
+  marginBottom: 10,
+  fontWeight: 700,
+};
+
+function ApplicationView({ app }: { app: CareersApplication }) {
+  return (
+    <div style={{ marginTop: 6 }}>
+      <Section title="Applicant">
+        <Kv label="Name" value={app.applicant.name} />
+        <Kv label="Address" value={app.applicant.address} />
+        <Kv label="Phone" value={app.applicant.phone} />
+        <Kv label="Email" value={app.applicant.email} />
+        <Kv label="Age" value={app.applicant.age} />
+        <Kv label="Date available" value={app.applicant.dateAvailable} />
+        <Kv label="Desired position" value={app.applicant.desiredPosition} />
+        <Kv label="US citizen" value={fmtBool(app.applicant.usCitizen)} />
+        <Kv label="Convicted of a crime" value={fmtBool(app.applicant.convictedCrime)} />
+        {app.applicant.convictedCrime && app.applicant.crimeDetails && (
+          <Kv label="Crime details" value={app.applicant.crimeDetails} multiline />
+        )}
+      </Section>
+
+      <Section title="Driver's license">
+        <Kv label="Has driver's license" value={fmtBool(app.driversLicense.hasLicense)} />
+        <Kv label="Has CDL" value={fmtBool(app.driversLicense.hasCdl)} />
+        <Kv label="License state" value={app.driversLicense.licenseState} />
+        <Kv label="Primary transportation" value={app.driversLicense.primaryTransportation} />
+        <Kv label="Accidents (last 3 yr)" value={app.driversLicense.accidents3yr} />
+        <Kv label="Violations (last 3 yr)" value={app.driversLicense.violations3yr} />
+      </Section>
+
+      <Section title="Education">
+        <EducationDetail label="High School" entry={app.education.highSchool} />
+        <EducationDetail label="College" entry={app.education.college} />
+        {app.education.other && (
+          <Kv label="Other education" value={app.education.other} multiline />
+        )}
+      </Section>
+
+      {app.references.some((r) => r.name || r.company || r.phone || r.address) && (
+        <Section title="References">
+          {app.references.map((r, i) =>
+            r.name || r.company || r.phone || r.address ? (
+              <div
+                key={i}
+                style={{
+                  paddingTop: i > 0 ? 10 : 0,
+                  marginTop: i > 0 ? 10 : 0,
+                  borderTop: i > 0 ? '1px dashed #2a332d' : 'none',
+                }}
+              >
+                <Kv label="Name" value={r.name} />
+                <Kv label="Company" value={r.company} />
+                <Kv label="Phone" value={r.phone} />
+                <Kv label="Address" value={r.address} />
+              </div>
+            ) : null
+          )}
+        </Section>
+      )}
+
+      {app.previousEmployment.some(
+        (j) => j.company || j.jobTitle || j.startDate || j.endDate
+      ) && (
+        <Section title="Previous employment">
+          {app.previousEmployment.map((j, i) =>
+            j.company || j.jobTitle || j.startDate || j.endDate ? (
+              <div
+                key={i}
+                style={{
+                  paddingTop: i > 0 ? 10 : 0,
+                  marginTop: i > 0 ? 10 : 0,
+                  borderTop: i > 0 ? '1px dashed #2a332d' : 'none',
+                }}
+              >
+                <Kv label="Company" value={j.company} />
+                <Kv label="Job title" value={j.jobTitle} />
+                <Kv label="Phone" value={j.phone} />
+                <Kv label="Address" value={j.address} />
+                <Kv label="Starting salary" value={j.startingSalary} />
+                <Kv label="Ending salary" value={j.endingSalary} />
+                <Kv label="Start date" value={j.startDate} />
+                <Kv label="End date" value={j.endDate} />
+                <Kv label="Reason for leaving" value={j.reasonForLeaving} />
+              </div>
+            ) : null
+          )}
+        </Section>
+      )}
+
+      <Section title="Military service">
+        <Kv label="Served" value={fmtBool(app.military.served)} />
+        {app.military.served && (
+          <>
+            <Kv label="Start" value={app.military.startDate} />
+            <Kv label="End" value={app.military.endDate} />
+            <Kv label="Branch" value={app.military.branch} />
+            <Kv label="Rank" value={app.military.rank} />
+            <Kv label="Discharge" value={app.military.dischargeType} />
+          </>
+        )}
+      </Section>
+
+      <Section title="Certification">
+        <Kv label="Certified" value={fmtBool(app.certification.certified)} />
+        <Kv label="Signature" value={app.certification.signature} />
+      </Section>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={sectionBoxStyle}>
+      <div style={sectionTitleStyle}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Kv({
+  label,
+  value,
+  multiline,
+}: {
+  label: string;
+  value: string | null | undefined;
+  multiline?: boolean;
+}) {
+  if (!value) return null;
+  return (
+    <div
+      style={{
+        display: multiline ? 'block' : 'grid',
+        gridTemplateColumns: multiline ? undefined : '180px 1fr',
+        gap: multiline ? 0 : 12,
+        padding: '3px 0',
+        fontSize: '0.85rem',
+      }}
+    >
+      <div style={{ color: '#5d6e62', fontSize: '0.78rem' }}>{label}</div>
+      <div
+        style={{
+          color: '#e8efe9',
+          whiteSpace: multiline ? 'pre-wrap' : 'normal',
+          marginTop: multiline ? 4 : 0,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function EducationDetail({
+  label,
+  entry,
+}: {
+  label: string;
+  entry: { name: string; start: string; finish: string; graduated: boolean };
+}) {
+  if (!entry.name && !entry.start && !entry.finish && !entry.graduated) {
+    return null;
+  }
+  return (
+    <div style={{ paddingBottom: 8 }}>
+      <div style={{ color: '#e8efe9', fontWeight: 600, marginBottom: 2 }}>
+        {label}: {entry.name || '—'}
+      </div>
+      <div style={{ color: '#8aa093', fontSize: '0.82rem' }}>
+        {entry.start || '?'} – {entry.finish || '?'}{' '}
+        {entry.graduated ? '· Graduated' : ''}
+      </div>
+    </div>
+  );
+}
+
+function fmtBool(b: boolean): string {
+  return b ? 'Yes' : 'No';
 }
