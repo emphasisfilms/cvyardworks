@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import PageHero from '@/components/PageHero/PageHero';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+
+const BANNER_PATH = 'page-banners/contact.jpg';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,15 +40,15 @@ export default async function ContactPage() {
   const location = site_settings?.location ?? 'Walpole, NH';
 
   return (
-    <section className={styles.page}>
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className="section-heading">
-            {c.heading} <span>{c.headingAccent}</span>
-          </h1>
-          <p className="section-subtitle">{c.subtitle}</p>
-        </div>
-
+    <>
+      <PageHero
+        heading={c.heading}
+        headingAccent={c.headingAccent}
+        subtitle={c.subtitle}
+        photoPath={BANNER_PATH}
+      />
+      <section className={styles.page}>
+        <div className={styles.container}>
         <div className={styles.grid}>
           <div className={styles.card}>
             <div className={styles.cardIcon}>&#9742;</div>
@@ -80,7 +83,8 @@ export default async function ContactPage() {
             Request a Free Estimate
           </Link>
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }

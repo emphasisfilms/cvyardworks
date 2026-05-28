@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import HireForm from '@/components/HireForm/HireForm';
+import PageHero from '@/components/PageHero/PageHero';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+
+const BANNER_PATH = 'page-banners/careers.jpg';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,15 +37,15 @@ export default async function CareersPage() {
   const c = careers_page ?? DEFAULT;
 
   return (
-    <section className={styles.page}>
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className="section-heading">
-            {c.heading} <span>{c.headingAccent}</span>
-          </h1>
-          <p className="section-subtitle">{c.subtitle}</p>
-        </div>
-
+    <>
+      <PageHero
+        heading={c.heading}
+        headingAccent={c.headingAccent}
+        subtitle={c.subtitle}
+        photoPath={BANNER_PATH}
+      />
+      <section className={styles.page}>
+        <div className={styles.container}>
         <div className={styles.infoGrid}>
           <div className={styles.card}>
             <h3>Why Work With Us</h3>
@@ -73,7 +76,8 @@ export default async function CareersPage() {
           <h2 className={styles.formHeading}>Join the Team</h2>
           <HireForm positions={c.positions} />
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }
