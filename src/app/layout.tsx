@@ -8,7 +8,7 @@ const raleway = Raleway({
   weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cvyardworks.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cvyardworks.vercel.app";
 const TITLE = "Connecticut Valley Yard Works | Walpole, NH";
 const DESCRIPTION =
   "Professional landscaping, lawn care, and snow removal services in Walpole, NH and the Connecticut Valley region. Yard Work: Solved.";

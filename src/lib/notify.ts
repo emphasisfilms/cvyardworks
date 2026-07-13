@@ -14,7 +14,7 @@ export interface MessageNotification {
   message: string | null;
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cvyardworks.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cvyardworks.vercel.app';
 
 function esc(s: string): string {
   return s
