@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { CareersApplication } from '@/lib/supabase/content-types';
 import styles from './HireForm.module.css';
 
@@ -149,19 +148,22 @@ export default function HireForm({
       value.applicant.desiredPosition ? ' for ' + value.applicant.desiredPosition : ''
     }`;
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.from('cvy_messages').insert({
-      form_type: 'careers',
-      name: value.applicant.name.trim(),
-      email: value.applicant.email.trim(),
-      phone: value.applicant.phone || null,
-      address: value.applicant.address || null,
-      position: value.applicant.desiredPosition || null,
-      message: summary,
-      application_data: value,
-    });
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        form_type: 'careers',
+        name: value.applicant.name.trim(),
+        email: value.applicant.email.trim(),
+        phone: value.applicant.phone || null,
+        address: value.applicant.address || null,
+        position: value.applicant.desiredPosition || null,
+        message: summary,
+        application_data: value,
+      }),
+    }).catch(() => null);
 
-    if (error) {
+    if (!res || !res.ok) {
       setError('Sorry — something went wrong submitting. Please try again or call us directly.');
       setSubmitting(false);
       return;

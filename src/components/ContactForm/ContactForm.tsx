@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import styles from './ContactForm.module.css';
 
 interface ContactFormProps {
@@ -32,10 +31,13 @@ export default function ContactForm({ formType, defaultService }: ContactFormPro
       message: (formData.get('message') as string) || null,
     };
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.from('cvy_messages').insert(payload);
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => null);
 
-    if (error) {
+    if (!res || !res.ok) {
       setError("Sorry — something went wrong submitting. Please try again or call us directly.");
       setSubmitting(false);
       return;
@@ -94,23 +96,27 @@ export default function ContactForm({ formType, defaultService }: ContactFormPro
             <select id="service" name="service" required defaultValue={defaultService || ''}>
               <option value="" disabled>Select a service...</option>
               <optgroup label="Spring">
+                <option value="spring">Spring Services (general)</option>
                 <option value="lawn-installation">Lawn Installation</option>
                 <option value="landscaping">Landscaping & Design</option>
                 <option value="spring-cleanup">Spring Cleanup</option>
                 <option value="mulching-spring">Mulching</option>
               </optgroup>
               <optgroup label="Summer">
+                <option value="summer">Summer Services (general)</option>
                 <option value="mowing">Mowing & Lawn Maintenance</option>
                 <option value="trimming">Bush & Hedge Trimming</option>
                 <option value="fertilizing">Fertilizing Programs</option>
               </optgroup>
               <optgroup label="Fall">
+                <option value="fall">Fall Services (general)</option>
                 <option value="leaf-cleanup">Leaf Cleanup</option>
                 <option value="bed-maintenance">Bed Maintenance</option>
                 <option value="perennial-cutting">Perennial Cutting</option>
                 <option value="mulching-winter">Mulching for Winter</option>
               </optgroup>
               <optgroup label="Winter">
+                <option value="winter">Winter Services (general)</option>
                 <option value="commercial-snow">Commercial Snow Removal</option>
                 <option value="residential-snow">Residential Driveway Plowing</option>
                 <option value="roof-snow">Roof Snow Removal</option>

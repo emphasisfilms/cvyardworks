@@ -1,8 +1,9 @@
 -- =============================================================
 -- CV Yard Works — add application_data column for hire applications
 --
--- Run this in the snowplowsales Supabase project's SQL Editor.
--- Safe to re-run.
+-- NOTE: already applied to the live project AND folded into schema.sql
+-- (which now declares this column directly). Kept for history; running
+-- it again is a no-op.
 -- =============================================================
 
 alter table public.cvy_messages

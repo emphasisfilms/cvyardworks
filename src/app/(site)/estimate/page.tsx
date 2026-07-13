@@ -28,10 +28,14 @@ const DEFAULT = {
   ],
 };
 
-export default async function EstimatePage() {
-  const { estimate_page, site_settings } = await fetchContent([
-    'estimate_page',
-    'site_settings',
+export default async function EstimatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string }>;
+}) {
+  const [{ estimate_page, site_settings }, { service }] = await Promise.all([
+    fetchContent(['estimate_page', 'site_settings']),
+    searchParams,
   ]);
   const c = estimate_page ?? DEFAULT;
   const phone = site_settings?.phone ?? '(603) 499-6799';
@@ -50,7 +54,7 @@ export default async function EstimatePage() {
       <section className={styles.page}>
         <div className={styles.container}>
         <div className={styles.grid}>
-          <ContactForm formType="estimate" />
+          <ContactForm formType="estimate" defaultService={service} />
 
           <aside className={styles.sidebar}>
             <div className={styles.infoCard}>

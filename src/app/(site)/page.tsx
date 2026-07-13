@@ -72,7 +72,7 @@ export default async function Home() {
       {/* About Section */}
       <section className="section">
         <div className="container">
-          <div className="grid-2">
+          <div className={aboutImageUrl ? 'grid-2' : undefined}>
             <div>
               <h2 className="section-heading">
                 {about.heading} <span>{about.headingAccent}</span>
@@ -88,33 +88,26 @@ export default async function Home() {
                 </Link>
               </div>
             </div>
-            <div
-              style={{
-                background: 'var(--color-bg-alt)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--color-border)',
-                minHeight: '340px',
-                position: 'relative',
-                overflow: 'hidden',
-                display: aboutImageUrl ? 'block' : 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-text-light)',
-                fontSize: '0.9rem',
-              }}
-            >
-              {aboutImageUrl ? (
+            {aboutImageUrl && (
+              <div
+                style={{
+                  background: 'var(--color-bg-alt)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-border)',
+                  minHeight: '340px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
                 <Image
                   src={aboutImageUrl}
-                  alt=""
+                  alt="A property maintained by Connecticut Valley Yard Works"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
                   style={{ objectFit: 'cover' }}
                 />
-              ) : (
-                <span>Property Image</span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -46,6 +46,29 @@
   line-height: 1.65;
 }
 
+.social {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.socialLink {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-on-dark-muted);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.socialLink:hover {
+  background: #8ed18a;
+  color: var(--color-bg-dark);
+}
+
 .heading {
   font-size: 0.95rem;
   font-weight: 600;

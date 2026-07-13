@@ -45,3 +45,13 @@ I need the snowplowsales Supabase keys so I can wire them into the cvyardworks `
    - **service_role** key (also `eyJ...`) — **keep this secret, never paste it in client code**
 
 These are the same keys snowplowsales already uses, so if you have them in 1Password from that setup, those work.
+
+## 5. Email notifications (Resend)
+
+New estimate requests and hire applications trigger an email to the owner. To enable, set these in `.env.local` (and in Vercel for production):
+
+1. `RESEND_API_KEY` — from [resend.com](https://resend.com) → API Keys.
+2. `NOTIFY_EMAIL_TO` — the address that should receive the alerts.
+3. `NOTIFY_EMAIL_FROM` — the sender. Until a domain is verified in Resend, use the default `CV Yard Works <onboarding@resend.dev>`; after verifying a domain (Resend → Domains), switch to e.g. `CV Yard Works <notifications@cvyardworks.com>`.
+
+If these are unset, forms still submit and land in the admin inbox — there's just no email alert.

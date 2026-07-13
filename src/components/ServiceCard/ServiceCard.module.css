@@ -15,6 +15,14 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
 }
 
+.photo {
+  position: relative;
+  height: 150px;
+  margin: -28px -24px 20px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+}
+
 .header {
   display: flex;
   align-items: center;

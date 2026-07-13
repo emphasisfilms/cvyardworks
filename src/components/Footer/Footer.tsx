@@ -20,6 +20,7 @@ export default function Footer({
 }) {
   const [accent, ...restWords] = settings.shortName.split(/\s+/);
   const rest = restWords.join(' ');
+  const social = settings.social ?? { facebook: null, instagram: null };
 
   return (
     <footer className={styles.footer}>
@@ -35,6 +36,38 @@ export default function Footer({
               Professional landscaping, lawn care, and snow removal services
               for the {settings.serviceArea}.
             </p>
+            {(social.facebook || social.instagram) && (
+              <div className={styles.social}>
+                {social.facebook && (
+                  <a
+                    href={social.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Facebook"
+                    className={styles.socialLink}
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                      <path d="M13.5 21v-8.3h2.8l.4-3.2h-3.2V7.4c0-.9.3-1.6 1.6-1.6h1.7V2.9c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.3v3.2h2.8V21h3.4z" />
+                    </svg>
+                  </a>
+                )}
+                {social.instagram && (
+                  <a
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                    className={styles.socialLink}
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <rect x="3" y="3" width="18" height="18" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           <div className={styles.links}>
