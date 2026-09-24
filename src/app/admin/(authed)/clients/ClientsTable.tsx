@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   CLIENT_DAYS,
@@ -9,6 +9,7 @@ import {
   type ClientTeam,
   type TeamRow,
 } from '@/lib/supabase/content-types';
+import { AutosaveStatusLine, useAutosave } from '../useAutosave';
 import { deleteClientAction, saveClientsAction } from './actions';
 
 type Toast = { kind: 'success' | 'error'; text: string } | null;
@@ -31,8 +32,7 @@ function newRow(sort: number): ClientRow {
 
 function toDay(v: string): ClientDay | null {
   const s = v.trim().slice(0, 3).toLowerCase();
-  const hit = CLIENT_DAYS.find((d) => d.toLowerCase() === s);
-  return hit ?? null;
+  return CLIENT_DAYS.find((d) => d.toLowerCase() === s) ?? null;
 }
 
 function toTeam(v: string): ClientTeam | null {
@@ -40,13 +40,13 @@ function toTeam(v: string): ClientTeam | null {
   return /^\d{1,3}$/.test(s) ? String(parseInt(s, 10)) : null;
 }
 
-function teamLabel(t: TeamRow): string {
-  const who = t.name || t.lead_name;
-  return who ? `Team ${t.number} · ${who}` : `Team ${t.number}`;
-}
-
 function toBool(v: string): boolean {
   return /^(y|yes|true|x|1|required|req)$/i.test(v.trim());
+}
+
+function teamLabel(t: TeamRow): string {
+  const who = t.name || t.lead_name;
+  return who ? `${t.number} · ${who}` : `Team ${t.number}`;
 }
 
 function fmtMins(m: number): string {
@@ -54,6 +54,8 @@ function fmtMins(m: number): string {
   const r = m % 60;
   return h ? `${h}h ${r ? `${r}m` : ''}`.trim() : `${r}m`;
 }
+
+const hasName = (r: ClientRow) => r.name.trim().length > 0;
 
 export default function ClientsTable({
   initial,
@@ -64,21 +66,23 @@ export default function ClientsTable({
   teams: TeamRow[];
   disabled: boolean;
 }) {
-  const teamByNumber = useMemo(
-    () => new Map(teams.map((t) => [String(t.number), t] as const)),
-    [teams]
-  );
-  const activeTeams = teams.filter((t) => t.active);
-  // A bagged property assigned to a team without a bagger is a scheduling problem.
-  const baggerConflicts = (r: ClientRow) =>
-    r.bagged && r.current_team != null && teamByNumber.get(r.current_team)?.has_bagger === false;
   const [rows, setRows] = useState<ClientRow[]>(initial);
-  const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [filter, setFilter] = useState('');
   const [pending, startTransition] = useTransition();
+
+  const save = useCallback((batch: ClientRow[]) => saveClientsAction(batch), []);
+  const auto = useAutosave<ClientRow>(save, { canSave: hasName });
+
+  const teamByNumber = useMemo(
+    () => new Map(teams.map((t) => [String(t.number), t] as const)),
+    [teams]
+  );
+  const activeTeams = teams.filter((t) => t.active);
+  const baggerConflict = (r: ClientRow) =>
+    r.bagged && r.current_team != null && teamByNumber.get(r.current_team)?.has_bagger === false;
 
   function flash(t: Toast) {
     setToast(t);
@@ -86,56 +90,35 @@ export default function ClientsTable({
   }
 
   function update(id: string, patch: Partial<ClientRow>) {
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    setDirty((d) => new Set(d).add(id));
+    const cur = rows.find((r) => r.id === id);
+    if (!cur) return;
+    const next = { ...cur, ...patch };
+    setRows((rs) => rs.map((r) => (r.id === id ? next : r)));
+    auto.touch(next);
   }
 
   function addRow() {
     const r = newRow(rows.length);
     setRows((rs) => [...rs, r]);
-    setDirty((d) => new Set(d).add(r.id));
+    auto.touch(r); // saves once it has a name
   }
 
   function remove(row: ClientRow) {
-    const isNew = !initial.some((r) => r.id === row.id) && dirty.has(row.id);
+    const isNew = !initial.some((r) => r.id === row.id) && !hasName(row);
     if (!isNew && !confirm(`Delete ${row.name || 'this client'}?`)) return;
     startTransition(async () => {
-      if (!isNew) {
-        const res = await deleteClientAction(row.id);
-        if (!res.ok) {
-          flash({ kind: 'error', text: res.error });
-          return;
-        }
+      auto.forget(row.id);
+      const res = await deleteClientAction(row.id); // harmless if never saved
+      if (!res.ok) {
+        flash({ kind: 'error', text: res.error });
+        return;
       }
       setRows((rs) => rs.filter((r) => r.id !== row.id));
-      setDirty((d) => {
-        const n = new Set(d);
-        n.delete(row.id);
-        return n;
-      });
       if (!isNew) flash({ kind: 'success', text: 'Client deleted' });
     });
   }
 
-  function save() {
-    const toSave = rows.filter((r) => dirty.has(r.id));
-    const blank = toSave.filter((r) => !r.name.trim());
-    if (blank.length) {
-      flash({ kind: 'error', text: 'Every client needs a name before saving' });
-      return;
-    }
-    startTransition(async () => {
-      const res = await saveClientsAction(toSave);
-      if (res.ok) {
-        setDirty(new Set());
-        flash({ kind: 'success', text: `Saved ${toSave.length} client${toSave.length === 1 ? '' : 's'}` });
-      } else {
-        flash({ kind: 'error', text: res.error });
-      }
-    });
-  }
-
-  // Paste rows from a spreadsheet: Name, Address, Service time, Required day, Current day, Team.
+  // Paste rows from a spreadsheet, in the same column order as the table.
   function importPaste() {
     const lines = pasteText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const added: ClientRow[] = [];
@@ -143,7 +126,7 @@ export default function ClientsTable({
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
       const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = ''] =
         cells.map((c) => c.trim());
-      if (!name || /^name$/i.test(name)) return; // skip header row
+      if (!name || /^name$/i.test(name)) return;
       const n = parseInt(mins, 10);
       added.push({
         ...newRow(rows.length + i),
@@ -162,14 +145,10 @@ export default function ClientsTable({
       return;
     }
     setRows((rs) => [...rs, ...added]);
-    setDirty((d) => {
-      const n = new Set(d);
-      added.forEach((r) => n.add(r.id));
-      return n;
-    });
+    added.forEach((r) => auto.touch(r));
     setPasteText('');
     setPasteOpen(false);
-    flash({ kind: 'success', text: `Added ${added.length} rows — click Save to keep them` });
+    flash({ kind: 'success', text: `Added ${added.length} row${added.length === 1 ? '' : 's'}` });
   }
 
   const visible = useMemo(() => {
@@ -182,7 +161,6 @@ export default function ClientsTable({
     );
   }, [rows, filter]);
 
-  // Workload per day and per team, for a quick sanity check before optimizing.
   const byDay = useMemo(() => {
     const m = new Map<string, { n: number; mins: number }>();
     for (const r of rows) {
@@ -205,7 +183,9 @@ export default function ClientsTable({
       e.mins += r.service_minutes ?? 0;
       m.set(k, e);
     }
-    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(m.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0], undefined, { numeric: true })
+    );
   }, [rows]);
 
   const totalMins = rows.reduce((s, r) => s + (r.service_minutes ?? 0), 0);
@@ -228,16 +208,19 @@ export default function ClientsTable({
           placeholder="Filter…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          style={{ maxWidth: 220 }}
+          style={{ maxWidth: 200 }}
         />
         <span className="spacer" />
         <span className="admin-field-hint">
-          {rows.length} client{rows.length === 1 ? '' : 's'} · {fmtMins(totalMins)} total
-          {dirty.size > 0 ? ` · ${dirty.size} unsaved` : ''}
+          {rows.length} client{rows.length === 1 ? '' : 's'} · {fmtMins(totalMins)}
         </span>
-        <button className="admin-btn" onClick={save} disabled={disabled || pending || dirty.size === 0}>
-          {pending ? 'Saving…' : 'Save changes'}
-        </button>
+        <AutosaveStatusLine
+          status={auto.status}
+          error={auto.error}
+          blocked={auto.blocked}
+          blockedHint="need a name before they save"
+          onRetry={auto.retry}
+        />
       </div>
 
       {pasteOpen && (
@@ -245,9 +228,9 @@ export default function ClientsTable({
           <h2 className="admin-card-title">Paste from a spreadsheet</h2>
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
-            Required day, Current day, Current team (1–6), Team required (yes/no), Bagged (yes/no).
-            Copy the cells straight out of Excel or Google Sheets. A header row is skipped
-            automatically.
+            Required day, Current day, Current team (number), Team required (yes/no), Bagged
+            (yes/no). Copy the cells straight out of Excel or Google Sheets. A header row is
+            skipped automatically.
           </p>
           <textarea
             className="admin-textarea"
@@ -268,18 +251,33 @@ export default function ClientsTable({
       )}
 
       <div className="admin-table-wrap">
-        <table className="admin-table">
+        <table className="admin-table admin-table-fit">
+          <colgroup>
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '30%' }} />
+            <col style={{ width: 82 }} />
+            <col style={{ width: 92 }} />
+            <col style={{ width: 92 }} />
+            <col style={{ width: 150 }} />
+            <col style={{ width: 66 }} />
+            <col style={{ width: 66 }} />
+            <col style={{ width: 40 }} />
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ minWidth: 150 }}>Name</th>
-              <th style={{ minWidth: 200, width: '30%' }}>Address</th>
-              <th>Service time</th>
+              <th>Name</th>
+              <th>Address</th>
+              <th>Service (min)</th>
               <th>Required day</th>
               <th>Current day</th>
               <th>Current team</th>
-              <th title="Check if this property must keep its current team">Team required</th>
-              <th title="Check if clippings must be bagged">Bagged</th>
-              <th aria-label="Actions" className="admin-table-actions" />
+              <th className="center" title="This property must keep its current team">
+                Team req.
+              </th>
+              <th className="center" title="Clippings must be bagged">
+                Bagged
+              </th>
+              <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -293,12 +291,12 @@ export default function ClientsTable({
               </tr>
             )}
             {visible.map((r) => (
-              <tr key={r.id} className={dirty.has(r.id) ? 'is-dirty' : undefined}>
+              <tr key={r.id} className={auto.dirtyIds.has(r.id) ? 'is-dirty' : undefined}>
                 <td>
                   <input
                     className="admin-input"
                     value={r.name}
-                    placeholder="Client or property name"
+                    placeholder="Client or property"
                     onChange={(e) => update(r.id, { name: e.target.value })}
                     disabled={disabled}
                   />
@@ -313,22 +311,19 @@ export default function ClientsTable({
                   />
                 </td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input
-                      className="admin-input num"
-                      type="number"
-                      min={0}
-                      step={5}
-                      value={r.service_minutes ?? ''}
-                      onChange={(e) =>
-                        update(r.id, {
-                          service_minutes: e.target.value === '' ? null : Number(e.target.value),
-                        })
-                      }
-                      disabled={disabled}
-                    />
-                    <span className="admin-field-hint">min</span>
-                  </div>
+                  <input
+                    className="admin-input num"
+                    type="number"
+                    min={0}
+                    step={5}
+                    value={r.service_minutes ?? ''}
+                    onChange={(e) =>
+                      update(r.id, {
+                        service_minutes: e.target.value === '' ? null : Number(e.target.value),
+                      })
+                    }
+                    disabled={disabled}
+                  />
                 </td>
                 <td>
                   <DaySelect
@@ -353,11 +348,12 @@ export default function ClientsTable({
                     onChange={(e) =>
                       update(r.id, {
                         current_team: (e.target.value || null) as ClientTeam | null,
-                        // no team means nothing to require
                         ...(e.target.value ? {} : { team_required: false }),
                       })
                     }
                     disabled={disabled}
+                    title={baggerConflict(r) ? 'This team has no bagger' : undefined}
+                    style={baggerConflict(r) ? { borderColor: 'var(--admin-warn)' } : undefined}
                   >
                     <option value="">—</option>
                     {activeTeams.map((t) => (
@@ -366,44 +362,32 @@ export default function ClientsTable({
                         {t.has_bagger ? '' : ' (no bagger)'}
                       </option>
                     ))}
-                    {/* keep a value visible even if its team was deactivated or removed */}
-                    {r.current_team && !activeTeams.some((t) => String(t.number) === r.current_team) && (
-                      <option value={r.current_team}>Team {r.current_team} (inactive)</option>
-                    )}
+                    {r.current_team &&
+                      !activeTeams.some((t) => String(t.number) === r.current_team) && (
+                        <option value={r.current_team}>Team {r.current_team} (inactive)</option>
+                      )}
                   </select>
                 </td>
-                <td style={{ textAlign: 'center' }}>
+                <td className="center">
                   <input
                     type="checkbox"
                     className="admin-check"
                     checked={r.team_required}
                     onChange={(e) => update(r.id, { team_required: e.target.checked })}
                     disabled={disabled || !r.current_team}
-                    title={
-                      r.current_team
-                        ? 'This property must keep its current team'
-                        : 'Pick a team first'
-                    }
+                    title={r.current_team ? 'Must keep its current team' : 'Pick a team first'}
                   />
                 </td>
-                <td style={{ textAlign: 'center' }}>
+                <td className="center">
                   <input
                     type="checkbox"
                     className="admin-check"
                     checked={r.bagged}
                     onChange={(e) => update(r.id, { bagged: e.target.checked })}
                     disabled={disabled}
-                    title="Clippings must be bagged"
+                    title={baggerConflict(r) ? 'Bagged, but this team has no bagger' : 'Clippings must be bagged'}
+                    style={baggerConflict(r) ? { outline: '2px solid var(--admin-warn)', outlineOffset: 1, borderRadius: 3 } : undefined}
                   />
-                  {baggerConflicts(r) && (
-                    <span
-                      className="admin-pill admin-pill-warn"
-                      style={{ marginLeft: 6, verticalAlign: 'middle' }}
-                      title="This team has no bagger"
-                    >
-                      no bagger
-                    </span>
-                  )}
                 </td>
                 <td className="admin-table-actions">
                   <button

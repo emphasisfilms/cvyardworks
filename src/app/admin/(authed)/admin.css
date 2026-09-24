@@ -18,7 +18,7 @@
   --admin-warn: #b7791f;
 
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 210px 1fr;
   min-height: 100vh;
   background: var(--admin-bg);
   color: var(--admin-text);
@@ -638,4 +638,106 @@ a.admin-stat:hover {
 .admin-icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ---- Autosave status ---- */
+
+.admin-save-status {
+  font-size: 0.82rem;
+  color: var(--admin-text-muted);
+  white-space: nowrap;
+}
+
+.admin-save-status.is-saved {
+  color: var(--admin-ok);
+}
+
+.admin-save-status.is-pending {
+  color: var(--admin-warn);
+}
+
+.admin-save-status.is-error {
+  color: var(--admin-danger);
+  white-space: normal;
+}
+
+.admin-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--admin-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- Fit-to-width tables: fixed layout, inputs shrink, no sideways scroll on desktop ---- */
+
+.admin-table-fit {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-table-fit th {
+  white-space: normal;
+  line-height: 1.2;
+  padding: 8px 6px;
+  font-size: 0.68rem;
+}
+
+.admin-table-fit td {
+  padding: 5px 4px;
+}
+
+.admin-table-fit .admin-input,
+.admin-table-fit .admin-select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+}
+
+.admin-table-fit .admin-select {
+  padding-right: 22px;
+  text-overflow: ellipsis;
+}
+
+.admin-table-fit .admin-input.num {
+  width: 100%;
+  text-align: right;
+}
+
+.admin-table-fit td.center,
+.admin-table-fit th.center {
+  text-align: center;
+}
+
+.admin-table-fit td.muted {
+  font-size: 0.82rem;
+  color: var(--admin-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Wide pages (tables) get the full width of the window. */
+.admin-main.admin-main-wide {
+  max-width: none;
+  padding-left: 28px;
+  padding-right: 28px;
+}
+
+@media (max-width: 1100px) {
+  /* Below this the columns cannot all fit legibly; allow sideways scroll again. */
+  .admin-table-fit {
+    min-width: 900px;
+  }
+}
+
+.admin-table-fit th.admin-table-actions,
+.admin-table-fit td.admin-table-actions {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding: 5px 6px 5px 0;
 }

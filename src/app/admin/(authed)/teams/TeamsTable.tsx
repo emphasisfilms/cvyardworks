@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import type { TeamRow } from '@/lib/supabase/content-types';
+import { AutosaveStatusLine, useAutosave } from '../useAutosave';
 import { deleteTeamAction, saveTeamsAction } from './actions';
 
 type Toast = { kind: 'success' | 'error'; text: string } | null;
@@ -23,9 +24,11 @@ export default function TeamsTable({
   disabled: boolean;
 }) {
   const [rows, setRows] = useState<TeamRow[]>(initial);
-  const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast>(null);
   const [pending, startTransition] = useTransition();
+
+  const save = useCallback((batch: TeamRow[]) => saveTeamsAction(batch), []);
+  const auto = useAutosave<TeamRow>(save, { canSave: (r) => r.number >= 1 });
 
   function flash(t: Toast) {
     setToast(t);
@@ -33,8 +36,11 @@ export default function TeamsTable({
   }
 
   function update(id: string, patch: Partial<TeamRow>) {
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    setDirty((d) => new Set(d).add(id));
+    const cur = rows.find((r) => r.id === id);
+    if (!cur) return;
+    const next = { ...cur, ...patch };
+    setRows((rs) => rs.map((r) => (r.id === id ? next : r)));
+    auto.touch(next);
   }
 
   function addRow() {
@@ -50,40 +56,20 @@ export default function TeamsTable({
       notes: null,
     };
     setRows((rs) => [...rs, r]);
-    setDirty((d) => new Set(d).add(r.id));
+    auto.touch(r);
   }
 
   function remove(row: TeamRow) {
-    const isNew = !initial.some((r) => r.id === row.id);
-    if (!isNew && !confirm(`Delete Team ${row.number}?`)) return;
+    if (!confirm(`Delete Team ${row.number}?`)) return;
     startTransition(async () => {
-      if (!isNew) {
-        const res = await deleteTeamAction(row.id, row.number);
-        if (!res.ok) {
-          flash({ kind: 'error', text: res.error });
-          return;
-        }
+      auto.forget(row.id);
+      const res = await deleteTeamAction(row.id, row.number);
+      if (!res.ok) {
+        flash({ kind: 'error', text: res.error });
+        return;
       }
       setRows((rs) => rs.filter((r) => r.id !== row.id));
-      setDirty((d) => {
-        const n = new Set(d);
-        n.delete(row.id);
-        return n;
-      });
-      if (!isNew) flash({ kind: 'success', text: `Team ${row.number} deleted` });
-    });
-  }
-
-  function save() {
-    const toSave = rows.filter((r) => dirty.has(r.id));
-    startTransition(async () => {
-      const res = await saveTeamsAction(toSave);
-      if (res.ok) {
-        setDirty(new Set());
-        flash({ kind: 'success', text: `Saved ${toSave.length} team${toSave.length === 1 ? '' : 's'}` });
-      } else {
-        flash({ kind: 'error', text: res.error });
-      }
+      flash({ kind: 'success', text: `Team ${row.number} deleted` });
     });
   }
 
@@ -99,25 +85,42 @@ export default function TeamsTable({
         <span className="spacer" />
         <span className="admin-field-hint">
           {active} active · {baggers} with a bagger
-          {dirty.size > 0 ? ` · ${dirty.size} unsaved` : ''}
         </span>
-        <button className="admin-btn" onClick={save} disabled={disabled || pending || dirty.size === 0}>
-          {pending ? 'Saving…' : 'Save changes'}
-        </button>
+        <AutosaveStatusLine
+          status={auto.status}
+          error={auto.error}
+          blocked={auto.blocked}
+          blockedHint="need a team number"
+          onRetry={auto.retry}
+        />
       </div>
 
       <div className="admin-table-wrap">
-        <table className="admin-table">
+        <table className="admin-table admin-table-fit">
+          <colgroup>
+            <col style={{ width: 70 }} />
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '24%' }} />
+            <col style={{ width: 160 }} />
+            <col style={{ width: 66 }} />
+            <col style={{ width: 66 }} />
+            <col />
+            <col style={{ width: 40 }} />
+          </colgroup>
           <thead>
             <tr>
-              <th>Team #</th>
-              <th style={{ minWidth: 140 }}>Name (optional)</th>
-              <th style={{ minWidth: 160 }}>Team lead</th>
-              <th style={{ minWidth: 140 }}>Lead phone</th>
-              <th title="Can take properties marked Bagged">Bagger</th>
-              <th title="Inactive teams are hidden from the Clients dropdown">Active</th>
+              <th className="center">Team #</th>
+              <th>Name (optional)</th>
+              <th>Team lead</th>
+              <th>Lead phone</th>
+              <th className="center" title="Can take properties marked Bagged">
+                Bagger
+              </th>
+              <th className="center" title="Inactive teams are hidden from the Clients dropdown">
+                Active
+              </th>
               <th>Assigned</th>
-              <th aria-label="Actions" className="admin-table-actions" />
+              <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -131,7 +134,7 @@ export default function TeamsTable({
             {rows.map((r) => {
               const l = load[String(r.number)];
               return (
-                <tr key={r.id} className={dirty.has(r.id) ? 'is-dirty' : undefined}>
+                <tr key={r.id} className={auto.dirtyIds.has(r.id) ? 'is-dirty' : undefined}>
                   <td>
                     <input
                       className="admin-input num"
@@ -141,7 +144,7 @@ export default function TeamsTable({
                       value={r.number}
                       onChange={(e) => update(r.id, { number: Number(e.target.value) })}
                       disabled={disabled}
-                      style={{ width: 72, minWidth: 60, textAlign: 'center' }}
+                      style={{ textAlign: 'center' }}
                     />
                   </td>
                   <td>
@@ -172,7 +175,7 @@ export default function TeamsTable({
                       disabled={disabled}
                     />
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="center">
                     <input
                       type="checkbox"
                       className="admin-check"
@@ -182,7 +185,7 @@ export default function TeamsTable({
                       title="This crew has a bagger"
                     />
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="center">
                     <input
                       type="checkbox"
                       className="admin-check"
@@ -192,7 +195,7 @@ export default function TeamsTable({
                       title="Show this team in the Clients dropdown"
                     />
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: '0.85rem', color: 'var(--admin-text-muted)' }}>
+                  <td className="muted">
                     {l ? (
                       <>
                         {l.n} stop{l.n === 1 ? '' : 's'} · {fmtMins(l.mins)}
@@ -200,7 +203,11 @@ export default function TeamsTable({
                           <span
                             className={`admin-pill ${r.has_bagger ? '' : 'admin-pill-warn'}`}
                             style={{ marginLeft: 6 }}
-                            title={r.has_bagger ? 'Bagged properties' : 'Bagged properties, but this team has no bagger'}
+                            title={
+                              r.has_bagger
+                                ? 'Bagged properties'
+                                : 'Bagged properties, but this team has no bagger'
+                            }
                           >
                             {l.bagged} bagged
                           </span>
@@ -232,8 +239,8 @@ export default function TeamsTable({
       </div>
 
       <p className="admin-field-hint" style={{ marginTop: 12 }}>
-        A team with clients assigned can’t be deleted. Untick Active instead to hide it while
-        keeping its history.
+        Changes save automatically. A team with clients assigned can’t be deleted; untick Active
+        instead to hide it while keeping its history.
       </p>
 
       {toast && (

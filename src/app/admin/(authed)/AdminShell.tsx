@@ -75,7 +75,15 @@ export default function AdminShell({
         </div>
       </aside>
 
-      <main className="admin-main">{children}</main>
+      <main
+        className={`admin-main${
+          pathname.startsWith('/admin/clients') || pathname.startsWith('/admin/teams')
+            ? ' admin-main-wide'
+            : ''
+        }`}
+      >
+        {children}
+      </main>
     </div>
   );
 }
