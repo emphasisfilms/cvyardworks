@@ -186,9 +186,21 @@ export interface CareersApplication {
 export const CLIENT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 export type ClientDay = (typeof CLIENT_DAYS)[number];
 
-// Crews are numbered 1–6.
-export const CLIENT_TEAMS = ['1', '2', '3', '4', '5', '6'] as const;
-export type ClientTeam = (typeof CLIENT_TEAMS)[number];
+// A client's team is stored as the team number (as text) so the list of teams
+// can change in cvy_teams without touching client rows.
+export type ClientTeam = string;
+
+// Row in cvy_teams — the admin "Crews & Teams" table.
+export interface TeamRow {
+  id: string;
+  number: number;
+  name: string;
+  lead_name: string;
+  lead_phone: string;
+  has_bagger: boolean;
+  active: boolean;
+  notes: string | null;
+}
 
 export interface ClientRow {
   id: string;

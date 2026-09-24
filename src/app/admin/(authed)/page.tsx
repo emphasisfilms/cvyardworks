@@ -7,10 +7,11 @@ export const dynamic = 'force-dynamic';
 export default async function AdminDashboard() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ site_settings, hero, home_about }, services, clients] = await Promise.all([
+  const [{ site_settings, hero, home_about }, services, clients, teams] = await Promise.all([
     fetchContent(['site_settings', 'hero', 'home_about']),
     supabase.from('cvy_services').select('id, photo_path'),
     supabase.from('cvy_clients').select('id, current_day, current_team', { count: 'exact' }),
+    supabase.from('cvy_teams').select('id, active, has_bagger, lead_name'),
   ]);
 
   const notifyTo = process.env.NOTIFY_EMAIL_TO ?? null;
@@ -23,6 +24,10 @@ export default async function AdminDashboard() {
   const clientsReady = !clients.error;
   const clientCount = clients.count ?? 0;
   const unassigned = (clients.data ?? []).filter((c) => !c.current_day || !c.current_team).length;
+  const teamsReady = !teams.error;
+  const activeTeams = (teams.data ?? []).filter((t) => t.active);
+  const baggerTeams = activeTeams.filter((t) => t.has_bagger).length;
+  const teamsMissingLead = activeTeams.filter((t) => !t.lead_name).length;
 
   return (
     <>
@@ -112,6 +117,22 @@ export default async function AdminDashboard() {
               : 'Run the clients migration in Supabase'}
           </div>
         </Link>
+
+        <Link href="/admin/teams" className="admin-stat">
+          <div className="admin-stat-label">Crews &amp; teams</div>
+          <div className="admin-stat-value">
+            {teamsReady ? (
+              `${activeTeams.length} active`
+            ) : (
+              <span className="admin-pill admin-pill-warn">Table not set up</span>
+            )}
+          </div>
+          <div className="admin-stat-hint">
+            {teamsReady
+              ? `${baggerTeams} with a bagger${teamsMissingLead ? ` · ${teamsMissingLead} missing a lead` : ''}`
+              : 'Run the teams migration in Supabase'}
+          </div>
+        </Link>
       </div>
 
       <section className="admin-card">
@@ -130,6 +151,7 @@ export default async function AdminDashboard() {
           <QuickLink href="/admin/estimate" label="Estimate page" hint="Benefits + heading" />
           <QuickLink href="/admin/settings" label="Site settings" hint="Phone, name, hours, social" />
           <QuickLink href="/admin/clients" label="Clients & routes" hint="Mowing schedule table" />
+          <QuickLink href="/admin/teams" label="Crews & teams" hint="Leads, phones, baggers" />
         </div>
       </section>
 

@@ -1,13 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import {
-  CLIENT_DAYS,
-  CLIENT_TEAMS,
-  type ClientDay,
-  type ClientRow,
-  type ClientTeam,
-} from '@/lib/supabase/content-types';
+import { CLIENT_DAYS, type ClientDay, type ClientRow, type ClientTeam } from '@/lib/supabase/content-types';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -18,8 +12,8 @@ function day(v: unknown): ClientDay | null {
 }
 
 function team(v: unknown): ClientTeam | null {
-  const s = v == null ? '' : String(v).trim();
-  return (CLIENT_TEAMS as readonly string[]).includes(s) ? (s as ClientTeam) : null;
+  const s = v == null ? '' : String(v).trim().replace(/^(team|crew)\s*/i, '');
+  return /^\d{1,3}$/.test(s) ? String(parseInt(s, 10)) : null;
 }
 
 function text(v: unknown, max = 500): string {

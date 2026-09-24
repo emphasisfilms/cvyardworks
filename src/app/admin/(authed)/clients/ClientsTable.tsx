@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import {
   CLIENT_DAYS,
-  CLIENT_TEAMS,
   type ClientDay,
   type ClientRow,
   type ClientTeam,
+  type TeamRow,
 } from '@/lib/supabase/content-types';
 import { deleteClientAction, saveClientsAction } from './actions';
 
@@ -36,7 +37,12 @@ function toDay(v: string): ClientDay | null {
 
 function toTeam(v: string): ClientTeam | null {
   const s = v.trim().replace(/^(team|crew)\s*/i, '');
-  return (CLIENT_TEAMS as readonly string[]).includes(s) ? (s as ClientTeam) : null;
+  return /^\d{1,3}$/.test(s) ? String(parseInt(s, 10)) : null;
+}
+
+function teamLabel(t: TeamRow): string {
+  const who = t.name || t.lead_name;
+  return who ? `Team ${t.number} · ${who}` : `Team ${t.number}`;
 }
 
 function toBool(v: string): boolean {
@@ -51,11 +57,21 @@ function fmtMins(m: number): string {
 
 export default function ClientsTable({
   initial,
+  teams,
   disabled,
 }: {
   initial: ClientRow[];
+  teams: TeamRow[];
   disabled: boolean;
 }) {
+  const teamByNumber = useMemo(
+    () => new Map(teams.map((t) => [String(t.number), t] as const)),
+    [teams]
+  );
+  const activeTeams = teams.filter((t) => t.active);
+  // A bagged property assigned to a team without a bagger is a scheduling problem.
+  const baggerConflicts = (r: ClientRow) =>
+    r.bagged && r.current_team != null && teamByNumber.get(r.current_team)?.has_bagger === false;
   const [rows, setRows] = useState<ClientRow[]>(initial);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast>(null);
@@ -344,11 +360,16 @@ export default function ClientsTable({
                     disabled={disabled}
                   >
                     <option value="">—</option>
-                    {CLIENT_TEAMS.map((t) => (
-                      <option key={t} value={t}>
-                        Team {t}
+                    {activeTeams.map((t) => (
+                      <option key={t.id} value={String(t.number)}>
+                        {teamLabel(t)}
+                        {t.has_bagger ? '' : ' (no bagger)'}
                       </option>
                     ))}
+                    {/* keep a value visible even if its team was deactivated or removed */}
+                    {r.current_team && !activeTeams.some((t) => String(t.number) === r.current_team) && (
+                      <option value={r.current_team}>Team {r.current_team} (inactive)</option>
+                    )}
                   </select>
                 </td>
                 <td style={{ textAlign: 'center' }}>
@@ -374,6 +395,15 @@ export default function ClientsTable({
                     disabled={disabled}
                     title="Clippings must be bagged"
                   />
+                  {baggerConflicts(r) && (
+                    <span
+                      className="admin-pill admin-pill-warn"
+                      style={{ marginLeft: 6, verticalAlign: 'middle' }}
+                      title="This team has no bagger"
+                    >
+                      no bagger
+                    </span>
+                  )}
                 </td>
                 <td className="admin-table-actions">
                   <button
@@ -420,6 +450,9 @@ export default function ClientsTable({
           </section>
           <section className="admin-card" style={{ marginBottom: 0 }}>
             <h2 className="admin-card-title">Load by team</h2>
+            <p className="admin-card-desc" style={{ marginBottom: 8 }}>
+              Manage crews on <Link href="/admin/teams">Crews &amp; Teams</Link>.
+            </p>
             <table>
               <thead>
                 <tr>

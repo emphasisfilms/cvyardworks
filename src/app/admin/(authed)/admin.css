@@ -478,6 +478,7 @@ a.admin-stat:hover {
 
 .admin-table {
   width: 100%;
+  min-width: max-content; /* never squeeze cells; the wrapper scrolls instead */
   border-collapse: collapse;
   font-size: 0.88rem;
 }
@@ -512,7 +513,7 @@ a.admin-stat:hover {
 .admin-table .admin-select {
   padding: 7px 9px;
   font-size: 0.88rem;
-  min-width: 90px;
+  min-width: 80px;
 }
 
 .admin-table .admin-input.num {
@@ -603,10 +604,15 @@ a.admin-stat:hover {
 /* Trailing actions column: hugs its content and never clips at the edge. */
 .admin-table th.admin-table-actions,
 .admin-table td.admin-table-actions {
-  width: 1%;
+  /* A hard width, not 1%: with the other columns' min-widths in play the
+     browser was squeezing this cell narrower than the button inside it. */
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  box-sizing: border-box;
   white-space: nowrap;
   text-align: center;
-  padding-right: 10px;
+  padding: 6px 10px 6px 4px;
 }
 
 .admin-icon-btn {
