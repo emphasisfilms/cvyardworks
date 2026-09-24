@@ -180,3 +180,20 @@ export interface CareersApplication {
     signature: string;
   };
 }
+
+// Row in cvy_clients — the admin "Clients & Routes" table used for crew /
+// route planning. Days are short names ('Mon'..'Sun'); null means "any".
+export const CLIENT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+export type ClientDay = (typeof CLIENT_DAYS)[number];
+
+export interface ClientRow {
+  id: string;
+  name: string;
+  address: string;
+  service_minutes: number | null;
+  required_day: ClientDay | null;
+  current_day: ClientDay | null;
+  current_team: string | null;
+  notes: string | null;
+  sort_order: number;
+}

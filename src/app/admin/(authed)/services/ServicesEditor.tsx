@@ -149,7 +149,7 @@ function ServiceCardEditor({
       <h2 className="admin-card-title">
         <span style={{ marginRight: 8 }}>{value.icon}</span>
         {value.season}{' '}
-        <span style={{ color: '#5d6e62', fontWeight: 400, fontSize: '0.85rem' }}>
+        <span style={{ color: 'var(--admin-text-dim)', fontWeight: 400, fontSize: '0.85rem' }}>
           ({value.id})
         </span>
       </h2>
@@ -195,9 +195,9 @@ function ServiceCardEditor({
               width: 44,
               height: 36,
               padding: 2,
-              border: '1px solid #2a332d',
+              border: '1px solid var(--admin-border)',
               borderRadius: 6,
-              background: '#0f1410',
+              background: 'var(--admin-bg-inset)',
               cursor: 'pointer',
             }}
           />

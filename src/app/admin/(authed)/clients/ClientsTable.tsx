@@ -1,0 +1,436 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import { CLIENT_DAYS, type ClientDay, type ClientRow } from '@/lib/supabase/content-types';
+import { deleteClientAction, saveClientsAction } from './actions';
+
+type Toast = { kind: 'success' | 'error'; text: string } | null;
+
+function newRow(sort: number): ClientRow {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    address: '',
+    service_minutes: null,
+    required_day: null,
+    current_day: null,
+    current_team: null,
+    notes: null,
+    sort_order: sort,
+  };
+}
+
+function toDay(v: string): ClientDay | null {
+  const s = v.trim().slice(0, 3).toLowerCase();
+  const hit = CLIENT_DAYS.find((d) => d.toLowerCase() === s);
+  return hit ?? null;
+}
+
+function fmtMins(m: number): string {
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return h ? `${h}h ${r ? `${r}m` : ''}`.trim() : `${r}m`;
+}
+
+export default function ClientsTable({
+  initial,
+  disabled,
+}: {
+  initial: ClientRow[];
+  disabled: boolean;
+}) {
+  const [rows, setRows] = useState<ClientRow[]>(initial);
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<Toast>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [filter, setFilter] = useState('');
+  const [pending, startTransition] = useTransition();
+
+  function flash(t: Toast) {
+    setToast(t);
+    if (t) setTimeout(() => setToast(null), 3000);
+  }
+
+  function update(id: string, patch: Partial<ClientRow>) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setDirty((d) => new Set(d).add(id));
+  }
+
+  function addRow() {
+    const r = newRow(rows.length);
+    setRows((rs) => [...rs, r]);
+    setDirty((d) => new Set(d).add(r.id));
+  }
+
+  function remove(row: ClientRow) {
+    const isNew = !initial.some((r) => r.id === row.id) && dirty.has(row.id);
+    if (!isNew && !confirm(`Delete ${row.name || 'this client'}?`)) return;
+    startTransition(async () => {
+      if (!isNew) {
+        const res = await deleteClientAction(row.id);
+        if (!res.ok) {
+          flash({ kind: 'error', text: res.error });
+          return;
+        }
+      }
+      setRows((rs) => rs.filter((r) => r.id !== row.id));
+      setDirty((d) => {
+        const n = new Set(d);
+        n.delete(row.id);
+        return n;
+      });
+      if (!isNew) flash({ kind: 'success', text: 'Client deleted' });
+    });
+  }
+
+  function save() {
+    const toSave = rows.filter((r) => dirty.has(r.id));
+    const blank = toSave.filter((r) => !r.name.trim());
+    if (blank.length) {
+      flash({ kind: 'error', text: 'Every client needs a name before saving' });
+      return;
+    }
+    startTransition(async () => {
+      const res = await saveClientsAction(toSave);
+      if (res.ok) {
+        setDirty(new Set());
+        flash({ kind: 'success', text: `Saved ${toSave.length} client${toSave.length === 1 ? '' : 's'}` });
+      } else {
+        flash({ kind: 'error', text: res.error });
+      }
+    });
+  }
+
+  // Paste rows from a spreadsheet: Name, Address, Service time, Required day, Current day, Team.
+  function importPaste() {
+    const lines = pasteText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const added: ClientRow[] = [];
+    lines.forEach((line, i) => {
+      const cells = line.includes('\t') ? line.split('\t') : line.split(',');
+      const [name = '', address = '', mins = '', req = '', cur = '', team = ''] = cells.map((c) =>
+        c.trim()
+      );
+      if (!name || /^name$/i.test(name)) return; // skip header row
+      const n = parseInt(mins, 10);
+      added.push({
+        ...newRow(rows.length + i),
+        name,
+        address,
+        service_minutes: Number.isFinite(n) ? n : null,
+        required_day: toDay(req),
+        current_day: toDay(cur),
+        current_team: team || null,
+      });
+    });
+    if (!added.length) {
+      flash({ kind: 'error', text: 'Nothing to import' });
+      return;
+    }
+    setRows((rs) => [...rs, ...added]);
+    setDirty((d) => {
+      const n = new Set(d);
+      added.forEach((r) => n.add(r.id));
+      return n;
+    });
+    setPasteText('');
+    setPasteOpen(false);
+    flash({ kind: 'success', text: `Added ${added.length} rows — click Save to keep them` });
+  }
+
+  const teams = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.current_team).filter(Boolean) as string[])).sort(),
+    [rows]
+  );
+
+  const visible = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      [r.name, r.address, r.current_team, r.current_day, r.required_day]
+        .filter(Boolean)
+        .some((v) => (v as string).toLowerCase().includes(q))
+    );
+  }, [rows, filter]);
+
+  // Workload per day and per team, for a quick sanity check before optimizing.
+  const byDay = useMemo(() => {
+    const m = new Map<string, { n: number; mins: number }>();
+    for (const r of rows) {
+      const k = r.current_day ?? 'Unassigned';
+      const e = m.get(k) ?? { n: 0, mins: 0 };
+      e.n += 1;
+      e.mins += r.service_minutes ?? 0;
+      m.set(k, e);
+    }
+    const order = [...CLIENT_DAYS, 'Unassigned'];
+    return order.filter((d) => m.has(d)).map((d) => [d, m.get(d)!] as const);
+  }, [rows]);
+
+  const byTeam = useMemo(() => {
+    const m = new Map<string, { n: number; mins: number }>();
+    for (const r of rows) {
+      const k = r.current_team ?? 'Unassigned';
+      const e = m.get(k) ?? { n: 0, mins: 0 };
+      e.n += 1;
+      e.mins += r.service_minutes ?? 0;
+      m.set(k, e);
+    }
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [rows]);
+
+  const totalMins = rows.reduce((s, r) => s + (r.service_minutes ?? 0), 0);
+
+  return (
+    <>
+      <div className="admin-toolbar">
+        <button className="admin-btn" onClick={addRow} disabled={disabled || pending}>
+          + Add client
+        </button>
+        <button
+          className="admin-btn admin-btn-secondary"
+          onClick={() => setPasteOpen((o) => !o)}
+          disabled={disabled || pending}
+        >
+          Paste from spreadsheet
+        </button>
+        <input
+          className="admin-input"
+          placeholder="Filter…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{ maxWidth: 220 }}
+        />
+        <span className="spacer" />
+        <span className="admin-field-hint">
+          {rows.length} client{rows.length === 1 ? '' : 's'} · {fmtMins(totalMins)} total
+          {dirty.size > 0 ? ` · ${dirty.size} unsaved` : ''}
+        </span>
+        <button className="admin-btn" onClick={save} disabled={disabled || pending || dirty.size === 0}>
+          {pending ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+
+      {pasteOpen && (
+        <section className="admin-card">
+          <h2 className="admin-card-title">Paste from a spreadsheet</h2>
+          <p className="admin-card-desc">
+            One client per line, columns in this order: Name, Address, Service time (minutes),
+            Required day, Current day, Current team. Copy the cells straight out of Excel or
+            Google Sheets. A header row is skipped automatically.
+          </p>
+          <textarea
+            className="admin-textarea"
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={'Smith Residence\t12 Main St, Walpole NH\t45\tAny\tTue\tCrew A'}
+            style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem', minHeight: 140 }}
+          />
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <button className="admin-btn" onClick={importPaste}>
+              Add rows
+            </button>
+            <button className="admin-btn admin-btn-secondary" onClick={() => setPasteOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th style={{ minWidth: 180 }}>Name</th>
+              <th style={{ minWidth: 240 }}>Address</th>
+              <th>Service time</th>
+              <th>Required day</th>
+              <th>Current day</th>
+              <th>Current team</th>
+              <th aria-label="Actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={7} className="admin-table-empty">
+                  {rows.length === 0
+                    ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
+                    : 'No clients match that filter.'}
+                </td>
+              </tr>
+            )}
+            {visible.map((r) => (
+              <tr key={r.id} className={dirty.has(r.id) ? 'is-dirty' : undefined}>
+                <td>
+                  <input
+                    className="admin-input"
+                    value={r.name}
+                    placeholder="Client or property name"
+                    onChange={(e) => update(r.id, { name: e.target.value })}
+                    disabled={disabled}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="admin-input"
+                    value={r.address}
+                    placeholder="Street, Town, State"
+                    onChange={(e) => update(r.id, { address: e.target.value })}
+                    disabled={disabled}
+                  />
+                </td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      className="admin-input num"
+                      type="number"
+                      min={0}
+                      step={5}
+                      value={r.service_minutes ?? ''}
+                      onChange={(e) =>
+                        update(r.id, {
+                          service_minutes: e.target.value === '' ? null : Number(e.target.value),
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                    <span className="admin-field-hint">min</span>
+                  </div>
+                </td>
+                <td>
+                  <DaySelect
+                    value={r.required_day}
+                    anyLabel="Any"
+                    onChange={(v) => update(r.id, { required_day: v })}
+                    disabled={disabled}
+                  />
+                </td>
+                <td>
+                  <DaySelect
+                    value={r.current_day}
+                    anyLabel="—"
+                    onChange={(v) => update(r.id, { current_day: v })}
+                    disabled={disabled}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="admin-input"
+                    list="cvy-teams"
+                    value={r.current_team ?? ''}
+                    placeholder="Crew"
+                    onChange={(e) => update(r.id, { current_team: e.target.value || null })}
+                    disabled={disabled}
+                    style={{ minWidth: 110 }}
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-danger admin-btn-sm"
+                    onClick={() => remove(r)}
+                    disabled={disabled || pending}
+                    title="Delete"
+                  >
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <datalist id="cvy-teams">
+          {teams.map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+      </div>
+
+      {rows.length > 0 && (
+        <div className="admin-summary">
+          <section className="admin-card" style={{ marginBottom: 0 }}>
+            <h2 className="admin-card-title">Load by day</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th className="num">Stops</th>
+                  <th className="num">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byDay.map(([d, e]) => (
+                  <tr key={d}>
+                    <td>{d}</td>
+                    <td className="num">{e.n}</td>
+                    <td className="num">{fmtMins(e.mins)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <section className="admin-card" style={{ marginBottom: 0 }}>
+            <h2 className="admin-card-title">Load by team</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th className="num">Stops</th>
+                  <th className="num">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byTeam.map(([t, e]) => (
+                  <tr key={t}>
+                    <td>{t}</td>
+                    <td className="num">{e.n}</td>
+                    <td className="num">{fmtMins(e.mins)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className={`admin-toast ${
+            toast.kind === 'success' ? 'admin-toast-success' : 'admin-toast-error'
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
+    </>
+  );
+}
+
+function DaySelect({
+  value,
+  anyLabel,
+  onChange,
+  disabled,
+}: {
+  value: ClientDay | null;
+  anyLabel: string;
+  onChange: (v: ClientDay | null) => void;
+  disabled: boolean;
+}) {
+  return (
+    <select
+      className="admin-select"
+      value={value ?? ''}
+      onChange={(e) => onChange((e.target.value || null) as ClientDay | null)}
+      disabled={disabled}
+    >
+      <option value="">{anyLabel}</option>
+      {CLIENT_DAYS.map((d) => (
+        <option key={d} value={d}>
+          {d}
+        </option>
+      ))}
+    </select>
+  );
+}

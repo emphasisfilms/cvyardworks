@@ -1,65 +1,28 @@
 import Link from 'next/link';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { fetchContent } from '@/lib/supabase/fetchContent';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   const supabase = await createSupabaseServerClient();
 
-  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  // Run a few counts and recent-messages query in parallel.
-  const [
-    totalMessages,
-    unreadMessages,
-    estimatesLast30d,
-    careersLast30d,
-    recent,
-  ] = await Promise.all([
-    supabase.from('cvy_messages').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('cvy_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_read', false),
-    supabase
-      .from('cvy_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('form_type', 'estimate')
-      .gte('created_at', since30d),
-    supabase
-      .from('cvy_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('form_type', 'careers')
-      .gte('created_at', since30d),
-    supabase
-      .from('cvy_messages')
-      .select('id, form_type, name, email, is_read, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5),
+  const [{ site_settings, hero, home_about }, services, clients] = await Promise.all([
+    fetchContent(['site_settings', 'hero', 'home_about']),
+    supabase.from('cvy_services').select('id, photo_path'),
+    supabase.from('cvy_clients').select('id, current_day, current_team', { count: 'exact' }),
   ]);
 
-  const stats: { label: string; value: number; hint?: string }[] = [
-    {
-      label: 'Total messages',
-      value: totalMessages.count ?? 0,
-      hint: 'All time',
-    },
-    {
-      label: 'Unread',
-      value: unreadMessages.count ?? 0,
-      hint: 'Needs attention',
-    },
-    {
-      label: 'Estimates (30 days)',
-      value: estimatesLast30d.count ?? 0,
-      hint: 'Recent quote requests',
-    },
-    {
-      label: 'Careers (30 days)',
-      value: careersLast30d.count ?? 0,
-      hint: 'Recent applications',
-    },
-  ];
+  const notifyTo = process.env.NOTIFY_EMAIL_TO ?? null;
+  const emailReady = !!process.env.RESEND_API_KEY && !!notifyTo;
+  const photosSet = (services.data ?? []).filter((s) => s.photo_path).length;
+  const photosTotal = (services.data ?? []).length || 4;
+  const social = site_settings?.social ?? { facebook: null, instagram: null };
+  const socialCount = [social.facebook, social.instagram].filter(Boolean).length;
+
+  const clientsReady = !clients.error;
+  const clientCount = clients.count ?? 0;
+  const unassigned = (clients.data ?? []).filter((c) => !c.current_day || !c.current_team).length;
 
   return (
     <>
@@ -67,162 +30,89 @@ export default async function AdminDashboard() {
         <div>
           <h1 className="admin-page-title">Dashboard</h1>
           <p className="admin-page-subtitle">
-            Overview of activity and quick links to common edits.
+            What the public site is showing right now. Click a card to change it.
           </p>
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            className="admin-card"
-            style={{ marginBottom: 0, padding: '16px 18px' }}
-          >
-            <div
-              style={{
-                fontSize: '0.72rem',
-                textTransform: 'uppercase',
-                letterSpacing: 0.6,
-                color: '#5d6e62',
-              }}
-            >
-              {s.label}
-            </div>
-            <div
-              style={{
-                fontSize: '1.9rem',
-                fontWeight: 700,
-                lineHeight: 1.1,
-                marginTop: 4,
-                color: s.label === 'Unread' && s.value > 0 ? '#6abf69' : '#e8efe9',
-              }}
-            >
-              {s.value}
-            </div>
-            {s.hint && (
-              <div style={{ fontSize: '0.75rem', color: '#5d6e62', marginTop: 2 }}>
-                {s.hint}
-              </div>
+      <div className="admin-stats">
+        <Link href="/admin/settings" className="admin-stat">
+          <div className="admin-stat-label">Phone</div>
+          <div className="admin-stat-value">{site_settings?.phone ?? '(603) 499-6799'}</div>
+          <div className="admin-stat-hint">Header, footer, contact page</div>
+        </Link>
+
+        <Link href="/admin/settings" className="admin-stat">
+          <div className="admin-stat-label">Hours</div>
+          <div className="admin-stat-value">{site_settings?.hoursLine ?? 'Mon – Sat · 7:00 AM – 6:00 PM'}</div>
+          <div className="admin-stat-hint">Footer and Google structured data</div>
+        </Link>
+
+        <div className="admin-stat">
+          <div className="admin-stat-label">Form emails</div>
+          <div className="admin-stat-value">
+            {emailReady ? (
+              <span className="admin-pill">On</span>
+            ) : (
+              <span className="admin-pill admin-pill-warn">Not configured</span>
             )}
           </div>
-        ))}
-      </div>
-
-      <section className="admin-card">
-        <h2 className="admin-card-title">Recent messages</h2>
-        <p className="admin-card-desc">The five most recent form submissions.</p>
-
-        {(recent.data ?? []).length === 0 ? (
-          <p
-            style={{
-              fontSize: '0.88rem',
-              color: '#8aa093',
-              margin: '8px 0 0',
-            }}
-          >
-            No submissions yet. They’ll show up here as soon as someone fills out
-            the estimate or careers form.
-          </p>
-        ) : (
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-            }}
-          >
-            {(recent.data ?? []).map((m) => (
-              <li
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 10px',
-                  borderRadius: 6,
-                  background: '#0f1410',
-                  border: '1px solid #2a332d',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.6,
-                    color: '#5d6e62',
-                    flexShrink: 0,
-                  }}
-                >
-                  {m.form_type}
-                </span>
-                <span
-                  style={{
-                    fontWeight: m.is_read ? 400 : 600,
-                    color: '#e8efe9',
-                  }}
-                >
-                  {m.name}
-                </span>
-                <span
-                  style={{
-                    color: '#8aa093',
-                    fontSize: '0.85rem',
-                    flex: 1,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {m.email}
-                </span>
-                {!m.is_read && (
-                  <span
-                    style={{
-                      fontSize: '0.68rem',
-                      color: '#6abf69',
-                      fontWeight: 700,
-                    }}
-                  >
-                    NEW
-                  </span>
-                )}
-                <span
-                  style={{
-                    color: '#5d6e62',
-                    fontSize: '0.78rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {new Date(m.created_at).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div style={{ marginTop: 14 }}>
-          <Link
-            href="/admin/messages"
-            className="admin-btn admin-btn-secondary"
-            style={{ textDecoration: 'none' }}
-          >
-            View all messages →
-          </Link>
+          <div className="admin-stat-hint">
+            {emailReady ? `Estimate and job applications go to ${notifyTo}` : 'Set RESEND_API_KEY and NOTIFY_EMAIL_TO on Vercel'}
+          </div>
         </div>
-      </section>
+
+        <Link href="/admin/settings" className="admin-stat">
+          <div className="admin-stat-label">Social links</div>
+          <div className="admin-stat-value">
+            {socialCount === 0 ? (
+              <span className="admin-pill admin-pill-warn">None set</span>
+            ) : (
+              `${socialCount} of 2`
+            )}
+          </div>
+          <div className="admin-stat-hint">
+            {social.facebook ? 'Facebook ✓ ' : 'Facebook – '}
+            {social.instagram ? 'Instagram ✓' : 'Instagram –'}
+          </div>
+        </Link>
+
+        <Link href="/admin/home" className="admin-stat">
+          <div className="admin-stat-label">Homepage photos</div>
+          <div className="admin-stat-value">
+            {hero?.backgroundPath ? 'Hero ✓' : 'Hero –'} · {home_about?.imagePath ? 'About ✓' : 'About –'}
+          </div>
+          <div className="admin-stat-hint">Banner and About section images</div>
+        </Link>
+
+        <Link href="/admin/services" className="admin-stat">
+          <div className="admin-stat-label">Service photos</div>
+          <div className="admin-stat-value">
+            {photosSet} of {photosTotal}
+          </div>
+          <div className="admin-stat-hint">Spring, Summer, Fall, Winter cards</div>
+        </Link>
+
+        <Link href="/admin/clients" className="admin-stat">
+          <div className="admin-stat-label">Clients &amp; routes</div>
+          <div className="admin-stat-value">
+            {clientsReady ? (
+              clientCount
+            ) : (
+              <span className="admin-pill admin-pill-warn">Table not set up</span>
+            )}
+          </div>
+          <div className="admin-stat-hint">
+            {clientsReady
+              ? unassigned > 0
+                ? `${unassigned} without a day or team`
+                : clientCount > 0
+                  ? 'All assigned a day and team'
+                  : 'Add your mowing clients to start planning routes'
+              : 'Run the clients migration in Supabase'}
+          </div>
+        </Link>
+      </div>
 
       <section className="admin-card">
         <h2 className="admin-card-title">Quick edits</h2>
@@ -238,40 +128,28 @@ export default async function AdminDashboard() {
           <QuickLink href="/admin/contact" label="Contact page" hint="Headings + cards" />
           <QuickLink href="/admin/careers" label="Careers page" hint="Perks + positions" />
           <QuickLink href="/admin/estimate" label="Estimate page" hint="Benefits + heading" />
-          <QuickLink href="/admin/settings" label="Site settings" hint="Phone, name, hours" />
+          <QuickLink href="/admin/settings" label="Site settings" hint="Phone, name, hours, social" />
+          <QuickLink href="/admin/clients" label="Clients & routes" hint="Mowing schedule table" />
         </div>
+      </section>
+
+      <section className="admin-card">
+        <h2 className="admin-card-title">Form submissions</h2>
+        <p className="admin-card-desc" style={{ marginBottom: 0 }}>
+          Estimate requests and job applications are emailed automatically
+          {notifyTo ? ` to ${notifyTo}` : ''}. A copy is also kept in the database in case an
+          email goes missing.
+        </p>
       </section>
     </>
   );
 }
 
-function QuickLink({
-  href,
-  label,
-  hint,
-}: {
-  href: string;
-  label: string;
-  hint: string;
-}) {
+function QuickLink({ href, label, hint }: { href: string; label: string; hint: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        display: 'block',
-        padding: '12px 14px',
-        background: '#0f1410',
-        border: '1px solid #2a332d',
-        borderRadius: 6,
-        textDecoration: 'none',
-        color: '#e8efe9',
-        transition: 'border-color 0.12s ease',
-      }}
-    >
+    <Link href={href} className="admin-quick">
       <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{label}</div>
-      <div style={{ color: '#5d6e62', fontSize: '0.78rem', marginTop: 2 }}>
-        {hint}
-      </div>
+      <div style={{ color: 'var(--admin-text-dim)', fontSize: '0.78rem', marginTop: 2 }}>{hint}</div>
     </Link>
   );
 }

@@ -3,7 +3,7 @@ import LoginForm from './LoginForm';
 import styles from './login.module.css';
 
 export const metadata = {
-  title: 'Admin Login | CV Yard Works',
+  title: { absolute: 'Admin Login | CV Yard Works' },
   robots: { index: false, follow: false },
 };
 

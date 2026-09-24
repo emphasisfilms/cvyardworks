@@ -4,7 +4,7 @@ import AdminShell from './AdminShell';
 import './admin.css';
 
 export const metadata = {
-  title: 'Admin | CV Yard Works',
+  title: { absolute: 'Admin | CV Yard Works' },
   robots: { index: false, follow: false },
 };
 

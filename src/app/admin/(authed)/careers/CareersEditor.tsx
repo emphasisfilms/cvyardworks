@@ -115,7 +115,7 @@ export default function CareersEditor({
           <div
             key={i}
             style={{
-              border: '1px solid #2a332d',
+              border: '1px solid var(--admin-border)',
               borderRadius: 6,
               padding: 12,
               marginBottom: 10,
@@ -164,7 +164,7 @@ export default function CareersEditor({
           <div
             key={i}
             style={{
-              border: '1px solid #2a332d',
+              border: '1px solid var(--admin-border)',
               borderRadius: 6,
               padding: 12,
               marginBottom: 10,

@@ -71,7 +71,7 @@ export async function sendMessageNotification(
         ${row('Message', msg.message)}
       </table>
       <p style="margin:18px 0 0;">
-        <a href="${SITE_URL}/admin/messages"
+        <a href="${SITE_URL}/admin"
            style="display:inline-block;background:#2f7a3e;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:10px 18px;border-radius:6px;">
           View in admin inbox
         </a>

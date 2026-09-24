@@ -23,7 +23,7 @@ export default async function AdminHomePage() {
           <h1 className="admin-page-title">Home Page</h1>
         </div>
         <div className="admin-card">
-          <p className="admin-card-desc" style={{ color: '#d97070' }}>
+          <p className="admin-card-desc" style={{ color: 'var(--admin-danger)' }}>
             Couldn’t load content: {error.message}
           </p>
         </div>

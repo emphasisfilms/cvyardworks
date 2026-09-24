@@ -21,7 +21,7 @@ export default async function AdminServicesPage() {
           <h1 className="admin-page-title">Services</h1>
         </div>
         <div className="admin-card">
-          <p className="admin-card-desc" style={{ color: '#d97070' }}>
+          <p className="admin-card-desc" style={{ color: 'var(--admin-danger)' }}>
             Couldn’t load services: {servicesError.message}
           </p>
         </div>

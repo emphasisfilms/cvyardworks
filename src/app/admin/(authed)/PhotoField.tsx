@@ -77,37 +77,14 @@ export default function PhotoField({
       <label className="admin-field-label">{label}</label>
       <span className="admin-field-hint">{hint}</span>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 14,
-          alignItems: 'flex-start',
-          marginTop: 6,
-        }}
-      >
-        <div
-          style={{
-            width: 180,
-            height: 110,
-            borderRadius: 6,
-            background: '#0f1410',
-            border: '1px solid #2a332d',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#5d6e62',
-            fontSize: '0.75rem',
-            position: 'relative',
-            flexShrink: 0,
-          }}
-        >
+      <div className="admin-photo">
+        <div className="admin-photo-thumb">
           {url ? (
             <Image
               src={url}
               alt=""
               fill
-              sizes="180px"
+              sizes="150px"
               style={{ objectFit: 'cover' }}
               unoptimized
             />
@@ -116,28 +93,33 @@ export default function PhotoField({
           )}
         </div>
 
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}
-        >
+        <div className="admin-photo-actions">
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
             onChange={handleFile}
             disabled={uploading}
-            style={{ fontSize: '0.85rem', color: '#b6c5b9' }}
+            style={{ display: 'none' }}
           />
+          <button
+            type="button"
+            className="admin-btn admin-btn-sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading…' : path ? 'Replace photo' : 'Upload photo'}
+          </button>
           {path && (
             <button
               type="button"
-              className="admin-btn admin-btn-secondary"
+              className="admin-btn admin-btn-secondary admin-btn-sm"
               onClick={() => onChange(null)}
-              style={{ alignSelf: 'flex-start', padding: '6px 12px' }}
+              disabled={uploading}
             >
-              Remove image
+              Remove
             </button>
           )}
-          {uploading && <span className="admin-field-hint">Uploading…</span>}
         </div>
       </div>
     </div>

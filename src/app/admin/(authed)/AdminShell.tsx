@@ -17,8 +17,8 @@ const TABS: Tab[] = [
   { href: '/admin/contact', label: 'Contact Page' },
   { href: '/admin/careers', label: 'Careers Page' },
   { href: '/admin/estimate', label: 'Estimate Page' },
-  { href: '/admin/messages', label: 'Messages' },
   { href: '/admin/settings', label: 'Site Settings' },
+  { href: '/admin/clients', label: 'Clients & Routes' },
 ];
 
 export default function AdminShell({
