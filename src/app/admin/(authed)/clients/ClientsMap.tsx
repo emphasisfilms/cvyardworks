@@ -156,6 +156,16 @@ export default function ClientsMap({
     }
   }, [ready, visible, labels, teamName]);
 
+  // Look up any un-pinned addresses automatically when the map opens.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !geoReady || disabled || geocoding) return;
+    if (missing.length === 0) return;
+    autoRan.current = true;
+    runGeocode(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoReady, disabled, missing.length]);
+
   // Leaflet needs a nudge when its container appears after being hidden.
   useEffect(() => {
     const t = setTimeout(() => mapRef.current?.invalidateSize(), 100);
@@ -236,7 +246,7 @@ export default function ClientsMap({
             </span>
             {missing.length > 0 && (
               <button className="admin-btn admin-btn-sm" onClick={() => runGeocode(false)} disabled={disabled || geocoding}>
-                {geocoding ? 'Looking up…' : 'Find addresses'}
+                {geocoding ? 'Looking up addresses…' : 'Find addresses'}
               </button>
             )}
             {failed.length > 0 && missing.length === 0 && (
