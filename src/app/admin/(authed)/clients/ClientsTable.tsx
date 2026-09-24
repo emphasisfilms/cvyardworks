@@ -27,7 +27,7 @@ function newRow(sort: number): ClientRow {
     bagged: false,
     active: true,
     mow: true,
-    plow: false,
+    plow: true,
     notes: null,
     sort_order: sort,
     lat: null,
@@ -151,7 +151,7 @@ export default function ClientsTable({
         bagged: toBool(bag),
         active: act ? !/^(n|no|false|inactive|0)$/i.test(act) : true,
         mow: mow ? toBool(mow) : true,
-        plow: plow ? toBool(plow) : false,
+        plow: plow ? toBool(plow) : true,
       });
     });
     if (!added.length) {
@@ -273,8 +273,8 @@ export default function ClientsTable({
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
             Required day, Current day, Current team (number), Team required (yes/no), Bagged
-            (yes/no), Active (yes/no, blank = yes), Mow (yes/no, blank = yes), Plow (yes/no). Copy
-            the cells straight out of Excel or Google Sheets. A header row is skipped automatically.
+            (yes/no), Active, Mow, Plow (each yes/no, blank = yes). Copy the cells straight out of
+            Excel or Google Sheets. A header row is skipped automatically.
           </p>
           <textarea
             className="admin-textarea"

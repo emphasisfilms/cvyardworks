@@ -78,7 +78,7 @@ export default async function AdminClientsPage() {
           ...r,
           active: r.active !== false,
           mow: r.mow !== false,
-          plow: r.plow === true,
+          plow: r.plow !== false,
           lat: r.lat ?? null,
           lng: r.lng ?? null,
           geocode_status: r.geocode_status ?? null,
