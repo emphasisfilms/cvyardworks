@@ -252,14 +252,14 @@ export default function ClientsTable({
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ minWidth: 180 }}>Name</th>
-              <th style={{ minWidth: 240 }}>Address</th>
+              <th style={{ minWidth: 150 }}>Name</th>
+              <th style={{ minWidth: 200, width: '30%' }}>Address</th>
               <th>Service time</th>
               <th>Required day</th>
               <th>Current day</th>
               <th>Current team</th>
               <th title="Check if this property must keep its current team">Team required</th>
-              <th aria-label="Actions" />
+              <th aria-label="Actions" className="admin-table-actions" />
             </tr>
           </thead>
           <tbody>
@@ -361,15 +361,18 @@ export default function ClientsTable({
                     }
                   />
                 </td>
-                <td>
+                <td className="admin-table-actions">
                   <button
                     type="button"
-                    className="admin-btn admin-btn-danger admin-btn-sm"
+                    className="admin-icon-btn"
                     onClick={() => remove(r)}
                     disabled={disabled || pending}
-                    title="Delete"
+                    title={`Delete ${r.name || 'client'}`}
+                    aria-label={`Delete ${r.name || 'client'}`}
                   >
-                    ✕
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
                   </button>
                 </td>
               </tr>
