@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+import { fleetLocateConfig } from '@/lib/fleetlocate';
+import FleetLocateCard from './integrations/FleetLocateCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +121,8 @@ export default async function AdminDashboard() {
               : 'Run the clients migration in Supabase'}
           </div>
         </Link>
+
+        <FleetLocateCard config={fleetLocateConfig()} />
 
         <Link href="/admin/teams" className="admin-stat">
           <div className="admin-stat-label">Crews &amp; teams</div>
