@@ -30,6 +30,9 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAdminRoute = path.startsWith('/admin');
   const isLoginRoute = path === '/admin/login';
+  const isSetPasswordRoute = path === '/admin/set-password';
+
+  if (isSetPasswordRoute) return supabaseResponse; // token in the URL does the signing in
 
   if (isAdminRoute && !isLoginRoute && !user) {
     const url = request.nextUrl.clone();

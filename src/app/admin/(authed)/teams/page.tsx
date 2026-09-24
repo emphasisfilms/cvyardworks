@@ -8,7 +8,7 @@ export default async function AdminTeamsPage() {
   const supabase = await createSupabaseServerClient();
   const [{ data, error }, clients] = await Promise.all([
     supabase.from('cvy_teams').select('*').order('number'),
-    supabase.from('cvy_clients').select('current_team, service_minutes, bagged'),
+    supabase.from('cvy_clients').select('current_team, service_minutes, bagged, active'),
   ]);
 
   const missingTable = error?.code === '42P01';
@@ -16,7 +16,7 @@ export default async function AdminTeamsPage() {
   // Per-team client counts so the table can show how loaded each crew is.
   const load = new Map<string, { n: number; mins: number; bagged: number }>();
   for (const c of clients.data ?? []) {
-    if (!c.current_team) continue;
+    if (!c.current_team || c.active === false) continue;
     const e = load.get(c.current_team) ?? { n: 0, mins: 0, bagged: 0 };
     e.n += 1;
     e.mins += c.service_minutes ?? 0;

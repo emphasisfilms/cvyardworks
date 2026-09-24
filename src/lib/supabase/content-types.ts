@@ -212,6 +212,7 @@ export interface ClientRow {
   current_team: ClientTeam | null;
   team_required: boolean; // this property must keep its current team
   bagged: boolean; // clippings must be bagged
+  active: boolean; // inactive clients are excluded from routes and totals
   notes: string | null;
   sort_order: number;
 }

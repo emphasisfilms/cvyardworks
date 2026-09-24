@@ -10,7 +10,7 @@ export default async function AdminDashboard() {
   const [{ site_settings, hero, home_about }, services, clients, teams] = await Promise.all([
     fetchContent(['site_settings', 'hero', 'home_about']),
     supabase.from('cvy_services').select('id, photo_path'),
-    supabase.from('cvy_clients').select('id, current_day, current_team', { count: 'exact' }),
+    supabase.from('cvy_clients').select('id, current_day, current_team, active'),
     supabase.from('cvy_teams').select('id, active, has_bagger, lead_name'),
   ]);
 
@@ -22,8 +22,10 @@ export default async function AdminDashboard() {
   const socialCount = [social.facebook, social.instagram].filter(Boolean).length;
 
   const clientsReady = !clients.error;
-  const clientCount = clients.count ?? 0;
-  const unassigned = (clients.data ?? []).filter((c) => !c.current_day || !c.current_team).length;
+  const activeClients = (clients.data ?? []).filter((c) => c.active !== false);
+  const clientCount = activeClients.length;
+  const inactiveCount = (clients.data ?? []).length - clientCount;
+  const unassigned = activeClients.filter((c) => !c.current_day || !c.current_team).length;
   const teamsReady = !teams.error;
   const activeTeams = (teams.data ?? []).filter((t) => t.active);
   const baggerTeams = activeTeams.filter((t) => t.has_bagger).length;
@@ -112,7 +114,7 @@ export default async function AdminDashboard() {
               ? unassigned > 0
                 ? `${unassigned} without a day or team`
                 : clientCount > 0
-                  ? 'All assigned a day and team'
+                  ? `All assigned a day and team${inactiveCount ? ` · ${inactiveCount} inactive` : ''}`
                   : 'Add your mowing clients to start planning routes'
               : 'Run the clients migration in Supabase'}
           </div>

@@ -25,6 +25,7 @@ function newRow(sort: number): ClientRow {
     current_team: null,
     team_required: false,
     bagged: false,
+    active: true,
     notes: null,
     sort_order: sort,
   };
@@ -71,6 +72,7 @@ export default function ClientsTable({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [filter, setFilter] = useState('');
+  const [showInactive, setShowInactive] = useState(true);
   const [pending, startTransition] = useTransition();
 
   const save = useCallback((batch: ClientRow[]) => saveClientsAction(batch), []);
@@ -124,7 +126,7 @@ export default function ClientsTable({
     const added: ClientRow[] = [];
     lines.forEach((line, i) => {
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = ''] =
+      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = '', act = ''] =
         cells.map((c) => c.trim());
       if (!name || /^name$/i.test(name)) return;
       const n = parseInt(mins, 10);
@@ -138,6 +140,7 @@ export default function ClientsTable({
         current_team: toTeam(team),
         team_required: toBool(teamReq),
         bagged: toBool(bag),
+        active: act ? !/^(n|no|false|inactive|0)$/i.test(act) : true,
       });
     });
     if (!added.length) {
@@ -153,17 +156,22 @@ export default function ClientsTable({
 
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) =>
-      [r.name, r.address, r.current_team, r.current_day, r.required_day]
+    return rows.filter((r) => {
+      if (!showInactive && !r.active) return false;
+      if (!q) return true;
+      return [r.name, r.address, r.current_team, r.current_day, r.required_day]
         .filter(Boolean)
-        .some((v) => (v as string).toLowerCase().includes(q))
-    );
-  }, [rows, filter]);
+        .some((v) => (v as string).toLowerCase().includes(q));
+    });
+  }, [rows, filter, showInactive]);
+
+  // Only active clients count toward routes and totals.
+  const activeRows = useMemo(() => rows.filter((r) => r.active), [rows]);
+  const inactiveCount = rows.length - activeRows.length;
 
   const byDay = useMemo(() => {
     const m = new Map<string, { n: number; mins: number }>();
-    for (const r of rows) {
+    for (const r of activeRows) {
       const k = r.current_day ?? 'Unassigned';
       const e = m.get(k) ?? { n: 0, mins: 0 };
       e.n += 1;
@@ -172,11 +180,11 @@ export default function ClientsTable({
     }
     const order = [...CLIENT_DAYS, 'Unassigned'];
     return order.filter((d) => m.has(d)).map((d) => [d, m.get(d)!] as const);
-  }, [rows]);
+  }, [activeRows]);
 
   const byTeam = useMemo(() => {
     const m = new Map<string, { n: number; mins: number }>();
-    for (const r of rows) {
+    for (const r of activeRows) {
       const k = r.current_team ? `Team ${r.current_team}` : 'Unassigned';
       const e = m.get(k) ?? { n: 0, mins: 0 };
       e.n += 1;
@@ -186,9 +194,9 @@ export default function ClientsTable({
     return Array.from(m.entries()).sort((a, b) =>
       a[0].localeCompare(b[0], undefined, { numeric: true })
     );
-  }, [rows]);
+  }, [activeRows]);
 
-  const totalMins = rows.reduce((s, r) => s + (r.service_minutes ?? 0), 0);
+  const totalMins = activeRows.reduce((s, r) => s + (r.service_minutes ?? 0), 0);
 
   return (
     <>
@@ -210,9 +218,21 @@ export default function ClientsTable({
           onChange={(e) => setFilter(e.target.value)}
           style={{ maxWidth: 200 }}
         />
+        {inactiveCount > 0 && (
+          <label className="admin-field-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              className="admin-check"
+              style={{ width: 15, height: 15 }}
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+            />
+            Show inactive ({inactiveCount})
+          </label>
+        )}
         <span className="spacer" />
         <span className="admin-field-hint">
-          {rows.length} client{rows.length === 1 ? '' : 's'} · {fmtMins(totalMins)}
+          {activeRows.length} active client{activeRows.length === 1 ? '' : 's'} · {fmtMins(totalMins)}
         </span>
         <AutosaveStatusLine
           status={auto.status}
@@ -229,8 +249,8 @@ export default function ClientsTable({
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
             Required day, Current day, Current team (number), Team required (yes/no), Bagged
-            (yes/no). Copy the cells straight out of Excel or Google Sheets. A header row is
-            skipped automatically.
+            (yes/no), Active (yes/no, blank = yes). Copy the cells straight out of Excel or Google
+            Sheets. A header row is skipped automatically.
           </p>
           <textarea
             className="admin-textarea"
@@ -261,6 +281,7 @@ export default function ClientsTable({
             <col style={{ width: 150 }} />
             <col style={{ width: 66 }} />
             <col style={{ width: 66 }} />
+            <col style={{ width: 60 }} />
             <col style={{ width: 40 }} />
           </colgroup>
           <thead>
@@ -277,13 +298,16 @@ export default function ClientsTable({
               <th className="center" title="Clippings must be bagged">
                 Bagged
               </th>
+              <th className="center" title="Inactive clients are left out of routes and totals">
+                Active
+              </th>
               <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={9} className="admin-table-empty">
+                <td colSpan={10} className="admin-table-empty">
                   {rows.length === 0
                     ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
                     : 'No clients match that filter.'}
@@ -291,7 +315,10 @@ export default function ClientsTable({
               </tr>
             )}
             {visible.map((r) => (
-              <tr key={r.id} className={auto.dirtyIds.has(r.id) ? 'is-dirty' : undefined}>
+              <tr
+                key={r.id}
+                className={`${auto.dirtyIds.has(r.id) ? 'is-dirty' : ''}${r.active ? '' : ' is-inactive'}`.trim() || undefined}
+              >
                 <td>
                   <input
                     className="admin-input"
@@ -387,6 +414,16 @@ export default function ClientsTable({
                     disabled={disabled}
                     title={baggerConflict(r) ? 'Bagged, but this team has no bagger' : 'Clippings must be bagged'}
                     style={baggerConflict(r) ? { outline: '2px solid var(--admin-warn)', outlineOffset: 1, borderRadius: 3 } : undefined}
+                  />
+                </td>
+                <td className="center">
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.active}
+                    onChange={(e) => update(r.id, { active: e.target.checked })}
+                    disabled={disabled}
+                    title={r.active ? 'Active — included in routes' : 'Inactive — left out of routes'}
                   />
                 </td>
                 <td className="admin-table-actions">

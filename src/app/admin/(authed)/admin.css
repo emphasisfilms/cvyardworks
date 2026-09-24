@@ -741,3 +741,14 @@ a.admin-stat:hover {
   max-width: none;
   padding: 5px 6px 5px 0;
 }
+
+/* Inactive client rows: still editable, visibly parked. */
+.admin-table tr.is-inactive td {
+  background: var(--admin-bg-inset);
+}
+
+.admin-table tr.is-inactive .admin-input,
+.admin-table tr.is-inactive .admin-select {
+  color: var(--admin-text-dim);
+  background: transparent;
+}

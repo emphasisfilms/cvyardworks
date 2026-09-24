@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Raleway } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const raleway = Raleway({
@@ -77,6 +78,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Supabase invite / reset links land on the site root with tokens in the hash.
+            Send them to the set-password page before anything else runs. */}
+        <Script id="auth-link-forward" strategy="beforeInteractive">
+          {`(function(){var h=location.hash;if(h&&/(^|[#&])(access_token|error_description)=|(^|[#&])type=(invite|recovery|magiclink|signup)/.test(h)&&location.pathname!=='/admin/set-password'){location.replace('/admin/set-password'+h);}})();`}
+        </Script>
+      </head>
       <body className={raleway.variable}>{children}</body>
     </html>
   );

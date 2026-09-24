@@ -64,6 +64,9 @@ export default function AdminShell({
               {userEmail}
             </div>
           </div>
+          <Link href="/admin/account" className="admin-view-site" style={{ textAlign: 'left', paddingLeft: 12 }}>
+            Change password
+          </Link>
           <form action={signOutAction}>
             <button type="submit" className="admin-signout">
               Sign out
