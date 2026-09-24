@@ -215,6 +215,7 @@ export interface ClientRow {
   active: boolean; // inactive clients are excluded from routes and totals
   mow: boolean; // summer service (mowing routes)
   plow: boolean; // winter service (plow routes)
+  sander: boolean; // plowing this property needs a truck with a sander
   notes: string | null;
   sort_order: number;
   // Map pin. null until the address has been geocoded (or if it failed).

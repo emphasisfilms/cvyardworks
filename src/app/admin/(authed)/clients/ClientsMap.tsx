@@ -137,6 +137,7 @@ export default function ClientsMap({
         r.required_day ? `Must be ${r.required_day}` : null,
         r.team_required ? 'Team required' : null,
         r.bagged ? 'Bagged' : null,
+        r.sander ? 'Sander' : null,
         r.geocode_status === 'manual' ? 'Pin placed by hand' : null,
         !r.active ? 'Inactive' : null,
       ].filter(Boolean);

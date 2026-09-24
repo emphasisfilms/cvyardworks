@@ -39,6 +39,7 @@ function clean(row: ClientRow): ClientRow {
     active: row.active !== false,
     mow: row.mow !== false,
     plow: row.plow !== false,
+    sander: row.sander === true && row.plow !== false,
     notes: text(row.notes, 2000) || null,
     sort_order: Number.isFinite(row.sort_order) ? row.sort_order : 0,
     lat: typeof row.lat === 'number' && Number.isFinite(row.lat) ? row.lat : null,

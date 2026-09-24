@@ -32,7 +32,7 @@ export default async function AdminClientsPage() {
   // 42703 = column does not exist (migration 003 not run).
   const missingTable = error?.code === '42P01';
   const missingColumn = error?.code === '42703';
-  const missingWhich = '002_clients.sql through 008_clients_services.sql (each is safe to re-run)';
+  const missingWhich = '002_clients.sql through 009_clients_sander.sql (each is safe to re-run)';
 
   return (
     <>
@@ -79,6 +79,7 @@ export default async function AdminClientsPage() {
           active: r.active !== false,
           mow: r.mow !== false,
           plow: r.plow !== false,
+          sander: r.sander === true,
           lat: r.lat ?? null,
           lng: r.lng ?? null,
           geocode_status: r.geocode_status ?? null,

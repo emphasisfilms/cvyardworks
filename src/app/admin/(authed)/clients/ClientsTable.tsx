@@ -28,6 +28,7 @@ function newRow(sort: number): ClientRow {
     active: true,
     mow: true,
     plow: true,
+    sander: false,
     notes: null,
     sort_order: sort,
     lat: null,
@@ -135,7 +136,7 @@ export default function ClientsTable({
     const added: ClientRow[] = [];
     lines.forEach((line, i) => {
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = '', act = '', mow = '', plow = ''] =
+      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = '', act = '', mow = '', plow = '', sander = ''] =
         cells.map((c) => c.trim());
       if (!name || /^name$/i.test(name)) return;
       const n = parseInt(mins, 10);
@@ -152,6 +153,7 @@ export default function ClientsTable({
         active: act ? !/^(n|no|false|inactive|0)$/i.test(act) : true,
         mow: mow ? toBool(mow) : true,
         plow: plow ? toBool(plow) : true,
+        sander: toBool(sander),
       });
     });
     if (!added.length) {
@@ -273,8 +275,8 @@ export default function ClientsTable({
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
             Required day, Current day, Current team (number), Team required (yes/no), Bagged
-            (yes/no), Active, Mow, Plow (each yes/no, blank = yes). Copy the cells straight out of
-            Excel or Google Sheets. A header row is skipped automatically.
+            (yes/no), Active, Mow, Plow (each yes/no, blank = yes), Sander (yes/no). Copy the cells
+            straight out of Excel or Google Sheets. A header row is skipped automatically.
           </p>
           <textarea
             className="admin-textarea"
@@ -299,16 +301,17 @@ export default function ClientsTable({
           <colgroup>
             <col style={{ width: '20%' }} />
             <col style={{ width: '28%' }} />
+            <col style={{ width: 46 }} />
+            <col style={{ width: 46 }} />
+            <col style={{ width: 72 }} />
+            <col style={{ width: 84 }} />
+            <col style={{ width: 84 }} />
+            <col style={{ width: 136 }} />
             <col style={{ width: 50 }} />
-            <col style={{ width: 50 }} />
-            <col style={{ width: 74 }} />
-            <col style={{ width: 86 }} />
-            <col style={{ width: 86 }} />
-            <col style={{ width: 140 }} />
+            <col style={{ width: 46 }} />
             <col style={{ width: 54 }} />
             <col style={{ width: 50 }} />
-            <col style={{ width: 54 }} />
-            <col style={{ width: 36 }} />
+            <col style={{ width: 34 }} />
           </colgroup>
           <thead>
             <tr>
@@ -330,6 +333,9 @@ export default function ClientsTable({
               <th className="center" title="Clippings must be bagged">
                 Bag
               </th>
+              <th className="center" title="Plowing needs a truck with a sander">
+                Sander
+              </th>
               <th className="center" title="Inactive clients are left out of routes and totals">
                 Active
               </th>
@@ -339,7 +345,7 @@ export default function ClientsTable({
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={12} className="admin-table-empty">
+                <td colSpan={13} className="admin-table-empty">
                   {rows.length === 0
                     ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
                     : 'No clients match that filter.'}
@@ -390,7 +396,9 @@ export default function ClientsTable({
                     type="checkbox"
                     className="admin-check"
                     checked={r.plow}
-                    onChange={(e) => update(r.id, { plow: e.target.checked })}
+                    onChange={(e) =>
+                      update(r.id, { plow: e.target.checked, ...(e.target.checked ? {} : { sander: false }) })
+                    }
                     disabled={disabled}
                     title="Winter service (plowing)"
                   />
@@ -472,6 +480,16 @@ export default function ClientsTable({
                     disabled={disabled}
                     title={baggerConflict(r) ? 'Bagged, but this team has no bagger' : 'Clippings must be bagged'}
                     style={baggerConflict(r) ? { outline: '2px solid var(--admin-warn)', outlineOffset: 1, borderRadius: 3 } : undefined}
+                  />
+                </td>
+                <td className="center">
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.sander}
+                    onChange={(e) => update(r.id, { sander: e.target.checked })}
+                    disabled={disabled || !r.plow}
+                    title={r.plow ? 'Needs a truck with a sander' : 'Tick Plow first'}
                   />
                 </td>
                 <td className="center">
