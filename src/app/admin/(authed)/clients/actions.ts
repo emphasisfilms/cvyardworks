@@ -37,6 +37,8 @@ function clean(row: ClientRow): ClientRow {
     team_required: row.team_required === true,
     bagged: row.bagged === true,
     active: row.active !== false,
+    mow: row.mow !== false,
+    plow: row.plow === true,
     notes: text(row.notes, 2000) || null,
     sort_order: Number.isFinite(row.sort_order) ? row.sort_order : 0,
     lat: typeof row.lat === 'number' && Number.isFinite(row.lat) ? row.lat : null,

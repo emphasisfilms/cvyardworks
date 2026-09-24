@@ -213,6 +213,8 @@ export interface ClientRow {
   team_required: boolean; // this property must keep its current team
   bagged: boolean; // clippings must be bagged
   active: boolean; // inactive clients are excluded from routes and totals
+  mow: boolean; // summer service (mowing routes)
+  plow: boolean; // winter service (plow routes)
   notes: string | null;
   sort_order: number;
   // Map pin. null until the address has been geocoded (or if it failed).

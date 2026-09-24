@@ -26,6 +26,8 @@ function newRow(sort: number): ClientRow {
     team_required: false,
     bagged: false,
     active: true,
+    mow: true,
+    plow: false,
     notes: null,
     sort_order: sort,
     lat: null,
@@ -79,6 +81,7 @@ export default function ClientsTable({
   const [pasteText, setPasteText] = useState('');
   const [filter, setFilter] = useState('');
   const [showInactive, setShowInactive] = useState(true);
+  const [service, setService] = useState<'' | 'mow' | 'plow'>('');
   const [pending, startTransition] = useTransition();
 
   const save = useCallback((batch: ClientRow[]) => saveClientsAction(batch), []);
@@ -132,7 +135,7 @@ export default function ClientsTable({
     const added: ClientRow[] = [];
     lines.forEach((line, i) => {
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = '', act = ''] =
+      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = '', act = '', mow = '', plow = ''] =
         cells.map((c) => c.trim());
       if (!name || /^name$/i.test(name)) return;
       const n = parseInt(mins, 10);
@@ -147,6 +150,8 @@ export default function ClientsTable({
         team_required: toBool(teamReq),
         bagged: toBool(bag),
         active: act ? !/^(n|no|false|inactive|0)$/i.test(act) : true,
+        mow: mow ? toBool(mow) : true,
+        plow: plow ? toBool(plow) : false,
       });
     });
     if (!added.length) {
@@ -164,12 +169,14 @@ export default function ClientsTable({
     const q = filter.trim().toLowerCase();
     return rows.filter((r) => {
       if (!showInactive && !r.active) return false;
+      if (service === 'mow' && !r.mow) return false;
+      if (service === 'plow' && !r.plow) return false;
       if (!q) return true;
       return [r.name, r.address, r.current_team, r.current_day, r.required_day]
         .filter(Boolean)
         .some((v) => (v as string).toLowerCase().includes(q));
     });
-  }, [rows, filter, showInactive]);
+  }, [rows, filter, showInactive, service]);
 
   // Only active clients count toward routes and totals.
   const activeRows = useMemo(() => rows.filter((r) => r.active), [rows]);
@@ -224,6 +231,17 @@ export default function ClientsTable({
           onChange={(e) => setFilter(e.target.value)}
           style={{ maxWidth: 200 }}
         />
+        <select
+          className="admin-select"
+          value={service}
+          onChange={(e) => setService(e.target.value as '' | 'mow' | 'plow')}
+          style={{ width: 150 }}
+          title="Show only clients with this service"
+        >
+          <option value="">All services</option>
+          <option value="mow">Mow (summer)</option>
+          <option value="plow">Plow (winter)</option>
+        </select>
         {inactiveCount > 0 && (
           <label className="admin-field-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
             <input
@@ -255,8 +273,8 @@ export default function ClientsTable({
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
             Required day, Current day, Current team (number), Team required (yes/no), Bagged
-            (yes/no), Active (yes/no, blank = yes). Copy the cells straight out of Excel or Google
-            Sheets. A header row is skipped automatically.
+            (yes/no), Active (yes/no, blank = yes), Mow (yes/no, blank = yes), Plow (yes/no). Copy
+            the cells straight out of Excel or Google Sheets. A header row is skipped automatically.
           </p>
           <textarea
             className="admin-textarea"
@@ -279,22 +297,30 @@ export default function ClientsTable({
       <div className="admin-table-wrap">
         <table className="admin-table admin-table-fit">
           <colgroup>
-            <col style={{ width: '22%' }} />
-            <col style={{ width: '30%' }} />
-            <col style={{ width: 82 }} />
-            <col style={{ width: 92 }} />
-            <col style={{ width: 92 }} />
-            <col style={{ width: 150 }} />
-            <col style={{ width: 66 }} />
-            <col style={{ width: 66 }} />
-            <col style={{ width: 60 }} />
-            <col style={{ width: 40 }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '28%' }} />
+            <col style={{ width: 50 }} />
+            <col style={{ width: 50 }} />
+            <col style={{ width: 74 }} />
+            <col style={{ width: 86 }} />
+            <col style={{ width: 86 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 50 }} />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 36 }} />
           </colgroup>
           <thead>
             <tr>
               <th>Name</th>
               <th>Address</th>
-              <th>Service (min)</th>
+              <th className="center" title="Summer service: on the mowing routes">
+                Mow
+              </th>
+              <th className="center" title="Winter service: on the plow routes">
+                Plow
+              </th>
+              <th>Time (min)</th>
               <th>Required day</th>
               <th>Current day</th>
               <th>Current team</th>
@@ -302,7 +328,7 @@ export default function ClientsTable({
                 Team req.
               </th>
               <th className="center" title="Clippings must be bagged">
-                Bagged
+                Bag
               </th>
               <th className="center" title="Inactive clients are left out of routes and totals">
                 Active
@@ -313,7 +339,7 @@ export default function ClientsTable({
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={10} className="admin-table-empty">
+                <td colSpan={12} className="admin-table-empty">
                   {rows.length === 0
                     ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
                     : 'No clients match that filter.'}
@@ -347,6 +373,26 @@ export default function ClientsTable({
                         : undefined
                     }
                     style={r.geocode_status === 'failed' ? { borderColor: 'var(--admin-warn)' } : undefined}
+                  />
+                </td>
+                <td className="center">
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.mow}
+                    onChange={(e) => update(r.id, { mow: e.target.checked })}
+                    disabled={disabled}
+                    title="Summer service (mowing)"
+                  />
+                </td>
+                <td className="center">
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.plow}
+                    onChange={(e) => update(r.id, { plow: e.target.checked })}
+                    disabled={disabled}
+                    title="Winter service (plowing)"
                   />
                 </td>
                 <td>

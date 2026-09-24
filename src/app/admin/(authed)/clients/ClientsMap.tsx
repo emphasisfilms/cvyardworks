@@ -42,6 +42,7 @@ export default function ClientsMap({
   const [day, setDay] = useState<string>('');
   const [team, setTeam] = useState<string>('');
   const [showInactive, setShowInactive] = useState(false);
+  const [service, setService] = useState<'' | 'mow' | 'plow'>('');
   const [labels, setLabels] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
@@ -65,9 +66,11 @@ export default function ClientsMap({
         if (!showInactive && !r.active) return false;
         if (day && (r.current_day ?? '') !== day) return false;
         if (team && (r.current_team ?? '') !== team) return false;
+        if (service === 'mow' && !r.mow) return false;
+        if (service === 'plow' && !r.plow) return false;
         return r.lat != null && r.lng != null;
       }),
-    [rows, day, team, showInactive]
+    [rows, day, team, showInactive, service]
   );
 
   // Create the map once.
@@ -130,6 +133,7 @@ export default function ClientsMap({
       });
       const teamLabel = r.current_team ? teamName.get(r.current_team) ?? `Team ${r.current_team}` : 'No team';
       const flags = [
+        [r.mow ? 'Mow' : null, r.plow ? 'Plow' : null].filter(Boolean).join(' + ') || 'No services',
         r.required_day ? `Must be ${r.required_day}` : null,
         r.team_required ? 'Team required' : null,
         r.bagged ? 'Bagged' : null,
@@ -212,6 +216,11 @@ export default function ClientsMap({
       )}
 
       <div className="admin-toolbar">
+        <select className="admin-select" value={service} onChange={(e) => setService(e.target.value as '' | 'mow' | 'plow')} style={{ width: 150 }}>
+          <option value="">All services</option>
+          <option value="mow">Mow (summer)</option>
+          <option value="plow">Plow (winter)</option>
+        </select>
         <select className="admin-select" value={day} onChange={(e) => setDay(e.target.value)} style={{ width: 130 }}>
           <option value="">All days</option>
           {CLIENT_DAYS.map((d) => (
