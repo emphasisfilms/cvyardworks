@@ -4,6 +4,14 @@ import { useState, useTransition } from 'react';
 import type { ConnectionTest } from '@/lib/fleetlocate';
 import { testFleetLocateAction } from './actions';
 
+function Item({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`admin-pill${ok ? '' : ' admin-pill-warn'}`} style={{ marginRight: 6 }}>
+      {label} {ok ? '✓' : '–'}
+    </span>
+  );
+}
+
 export default function FleetLocateCard({
   config,
 }: {
@@ -12,12 +20,6 @@ export default function FleetLocateCard({
   const [result, setResult] = useState<ConnectionTest | null>(null);
   const [pending, start] = useTransition();
   const allSet = config.username && config.password && config.appToken;
-
-  const Item = ({ ok, label }: { ok: boolean; label: string }) => (
-    <span className={`admin-pill${ok ? '' : ' admin-pill-warn'}`} style={{ marginRight: 6 }}>
-      {label} {ok ? '✓' : '–'}
-    </span>
-  );
 
   return (
     <div className="admin-stat">
