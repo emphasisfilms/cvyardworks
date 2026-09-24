@@ -9,7 +9,7 @@ export default async function AdminClientsPage() {
   const { data, error } = await supabase
     .from('cvy_clients')
     .select(
-      'id, name, address, service_minutes, required_day, current_day, current_team, team_required, notes, sort_order'
+      'id, name, address, service_minutes, required_day, current_day, current_team, team_required, bagged, notes, sort_order'
     )
     .order('sort_order')
     .order('name');
@@ -17,7 +17,10 @@ export default async function AdminClientsPage() {
   // 42P01 = table does not exist (migration 002 not run);
   // 42703 = column does not exist (migration 003 not run).
   const missingTable = error?.code === '42P01';
-  const missingColumn = error?.code === '42703' || /team_required/.test(error?.message ?? '');
+  const missingColumn = error?.code === '42703' || /team_required|bagged/.test(error?.message ?? '');
+  const missingWhich = /bagged/.test(error?.message ?? '')
+    ? '004_clients_bagged.sql'
+    : '003_clients_team_required.sql';
 
   return (
     <>
@@ -42,8 +45,7 @@ export default async function AdminClientsPage() {
           ) : missingColumn ? (
             <>
               The table needs one more column. In the Supabase SQL Editor run{' '}
-              <code>supabase/migrations/003_clients_team_required.sql</code> once, then reload
-              this page.
+              <code>supabase/migrations/{missingWhich}</code> once, then reload this page.
             </>
           ) : (
             <>Couldn’t load clients: {error.message}</>

@@ -22,6 +22,7 @@ function newRow(sort: number): ClientRow {
     current_day: null,
     current_team: null,
     team_required: false,
+    bagged: false,
     notes: null,
     sort_order: sort,
   };
@@ -124,7 +125,7 @@ export default function ClientsTable({
     const added: ClientRow[] = [];
     lines.forEach((line, i) => {
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = ''] =
+      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = '', bag = ''] =
         cells.map((c) => c.trim());
       if (!name || /^name$/i.test(name)) return; // skip header row
       const n = parseInt(mins, 10);
@@ -137,6 +138,7 @@ export default function ClientsTable({
         current_day: toDay(cur),
         current_team: toTeam(team),
         team_required: toBool(teamReq),
+        bagged: toBool(bag),
       });
     });
     if (!added.length) {
@@ -227,14 +229,15 @@ export default function ClientsTable({
           <h2 className="admin-card-title">Paste from a spreadsheet</h2>
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
-            Required day, Current day, Current team (1–6), Team required (yes/no). Copy the cells
-            straight out of Excel or Google Sheets. A header row is skipped automatically.
+            Required day, Current day, Current team (1–6), Team required (yes/no), Bagged (yes/no).
+            Copy the cells straight out of Excel or Google Sheets. A header row is skipped
+            automatically.
           </p>
           <textarea
             className="admin-textarea"
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={'Smith Residence\t12 Main St, Walpole NH\t45\tAny\tTue\t3\tyes'}
+            placeholder={'Smith Residence\t12 Main St, Walpole NH\t45\tAny\tTue\t3\tyes\tno'}
             style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem', minHeight: 140 }}
           />
           <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
@@ -259,13 +262,14 @@ export default function ClientsTable({
               <th>Current day</th>
               <th>Current team</th>
               <th title="Check if this property must keep its current team">Team required</th>
+              <th title="Check if clippings must be bagged">Bagged</th>
               <th aria-label="Actions" className="admin-table-actions" />
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={8} className="admin-table-empty">
+                <td colSpan={9} className="admin-table-empty">
                   {rows.length === 0
                     ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
                     : 'No clients match that filter.'}
@@ -359,6 +363,16 @@ export default function ClientsTable({
                         ? 'This property must keep its current team'
                         : 'Pick a team first'
                     }
+                  />
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.bagged}
+                    onChange={(e) => update(r.id, { bagged: e.target.checked })}
+                    disabled={disabled}
+                    title="Clippings must be bagged"
                   />
                 </td>
                 <td className="admin-table-actions">

@@ -40,6 +40,7 @@ function clean(row: ClientRow): ClientRow {
     current_day: day(row.current_day),
     current_team: team(row.current_team),
     team_required: row.team_required === true,
+    bagged: row.bagged === true,
     notes: text(row.notes, 2000) || null,
     sort_order: Number.isFinite(row.sort_order) ? row.sort_order : 0,
   };

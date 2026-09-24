@@ -199,6 +199,7 @@ export interface ClientRow {
   current_day: ClientDay | null;
   current_team: ClientTeam | null;
   team_required: boolean; // this property must keep its current team
+  bagged: boolean; // clippings must be bagged
   notes: string | null;
   sort_order: number;
 }
