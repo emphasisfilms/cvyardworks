@@ -3,6 +3,7 @@ import Image from 'next/image';
 import styles from './ServiceCard.module.css';
 import type { Service } from '@/lib/supabase/content-types';
 import { getPhotoUrl } from '@/lib/supabase/storage';
+import { SEASON_TO_SLUG } from '@/lib/service-pages';
 
 interface ServiceCardProps {
   service: Service;
@@ -10,6 +11,7 @@ interface ServiceCardProps {
 
 export default function ServiceCard({ service }: ServiceCardProps) {
   const photoUrl = getPhotoUrl(service.photo_path);
+  const slug = SEASON_TO_SLUG[service.id] ?? SEASON_TO_SLUG[service.season.toLowerCase()];
 
   return (
     <div className={styles.card} id={service.id}>
@@ -17,7 +19,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
         <div className={styles.photo}>
           <Image
             src={photoUrl}
-            alt={service.title}
+            alt={`${service.title} in Walpole, NH by Connecticut Valley Yard Works`}
             fill
             sizes="(max-width: 768px) 100vw, 25vw"
             style={{ objectFit: 'cover' }}
@@ -37,12 +39,19 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           </li>
         ))}
       </ul>
-      <Link
-        href={`/estimate?service=${service.id}`}
-        className={styles.link}
-      >
-        Get a Quote &rarr;
-      </Link>
+      <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap' }}>
+        {slug && (
+          <Link href={`/services/${slug}`} className={styles.link}>
+            Learn more &rarr;
+          </Link>
+        )}
+        <Link
+          href={`/estimate?service=${service.id}`}
+          className={styles.link}
+        >
+          Get a Quote &rarr;
+        </Link>
+      </div>
     </div>
   );
 }

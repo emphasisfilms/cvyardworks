@@ -42,7 +42,7 @@ export default function Header({ shortName = 'CV Yard Works' }: { shortName?: st
 
         <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ''}`}>
           <Link href="/" className={styles.navLink} onClick={closeMenu}>Home</Link>
-          <Link href="/#services" className={styles.navLink} onClick={closeMenu}>Services</Link>
+          <Link href="/services" className={styles.navLink} onClick={closeMenu}>Services</Link>
           <Link href="/contact" className={styles.navLink} onClick={closeMenu}>Contact</Link>
           <Link href="/careers" className={styles.navLink} onClick={closeMenu}>Careers</Link>
           <Link href="/estimate" className={`btn btn-primary ${styles.navCta}`} onClick={closeMenu}>

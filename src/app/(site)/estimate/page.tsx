@@ -3,16 +3,22 @@ import ContactForm from '@/components/ContactForm/ContactForm';
 import PageHero from '@/components/PageHero/PageHero';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+import JsonLd from '@/components/JsonLd/JsonLd';
+import { breadcrumbJsonLd, graph, pageMetadata } from '@/lib/seo';
 
 const BANNER_PATH = 'page-banners/estimate.jpg';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Free Estimate | Connecticut Valley Yard Works',
-  description:
-    'Request a free estimate for landscaping, lawn care, or snow removal services in the Connecticut Valley region.',
-};
+const TITLE = 'Free Estimate for Landscaping, Lawn Care & Snow Removal';
+const DESCRIPTION =
+  'Request a free, no-obligation estimate for landscaping, lawn care, fall cleanup or snow plowing in Walpole, NH and the Connecticut River Valley. We reply within 24 hours.';
+
+export const metadata: Metadata = pageMetadata({
+  title: `${TITLE} | Connecticut Valley Yard Works`,
+  description: DESCRIPTION,
+  path: '/estimate',
+});
 
 const DEFAULT = {
   heading: 'Free',
@@ -45,6 +51,14 @@ export default async function EstimatePage({
 
   return (
     <>
+      <JsonLd
+        data={graph(
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Free Estimate', path: '/estimate' },
+          ])
+        )}
+      />
       <PageHero
         heading={c.heading}
         headingAccent={c.headingAccent}

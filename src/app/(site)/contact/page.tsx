@@ -3,16 +3,22 @@ import Link from 'next/link';
 import PageHero from '@/components/PageHero/PageHero';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+import JsonLd from '@/components/JsonLd/JsonLd';
+import { breadcrumbJsonLd, graph, SITE_URL, pageMetadata } from '@/lib/seo';
 
 const BANNER_PATH = 'page-banners/contact.jpg';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Contact Us | Connecticut Valley Yard Works',
-  description:
-    'Get in touch with Connecticut Valley Yard Works in Walpole, NH. Call us at (603) 499-6799.',
-};
+const TITLE = 'Contact Us | Landscaping & Snow Removal in Walpole, NH';
+const DESCRIPTION =
+  'Contact Connecticut Valley Yard Works in Walpole, NH for landscaping, lawn care and snow removal. Call or text (603) 499-6799, Mon to Sat 7 AM to 6 PM.';
+
+export const metadata: Metadata = pageMetadata({
+  title: `${TITLE} | Connecticut Valley Yard Works`,
+  description: DESCRIPTION,
+  path: '/contact',
+});
 
 const DEFAULT = {
   heading: 'Contact',
@@ -41,6 +47,21 @@ export default async function ContactPage() {
 
   return (
     <>
+      <JsonLd
+        data={graph(
+          {
+            '@type': 'ContactPage',
+            '@id': `${SITE_URL}/contact#page`,
+            url: `${SITE_URL}/contact`,
+            name: 'Contact Connecticut Valley Yard Works',
+            about: { '@id': `${SITE_URL}/#business` },
+          },
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Contact', path: '/contact' },
+          ])
+        )}
+      />
       <PageHero
         heading={c.heading}
         headingAccent={c.headingAccent}

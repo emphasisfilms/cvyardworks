@@ -1,0 +1,236 @@
+.page {
+  padding-top: 64px;
+  padding-bottom: 80px;
+  background-color: var(--color-bg);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--color-text-light);
+  margin-bottom: 28px;
+}
+
+.breadcrumb a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.breadcrumb span[aria-hidden] {
+  color: var(--color-border-strong);
+}
+
+.intro {
+  max-width: 800px;
+}
+
+.intro p {
+  font-size: 1.08rem;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin: 44px 0 56px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+  color: var(--color-text-bright);
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: var(--color-text-light);
+}
+
+.cardPhoto {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+  background-color: var(--color-bg-alt);
+}
+
+.cardLink {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.cardLink:hover {
+  color: var(--color-primary-dark);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+  margin-bottom: 56px;
+}
+
+.faq {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faq details {
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-bright);
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: '+';
+  color: var(--color-primary);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.faq details[open] summary::after {
+  content: '\2212';
+}
+
+.faq details p {
+  margin-top: 10px;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.areas {
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+}
+
+.areas h2 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.areas p {
+  font-size: 0.95rem;
+  color: var(--color-text-light);
+  margin-bottom: 10px;
+}
+
+.areaList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+}
+
+.areaList li {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.cta {
+  text-align: center;
+  padding: 44px 24px;
+  background-color: var(--color-primary-soft);
+  border-radius: var(--radius-lg);
+}
+
+.cta p {
+  max-width: 560px;
+  margin: 0 auto 24px;
+  color: var(--color-text);
+}
+
+.ctaButtons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.related {
+  margin-top: 56px;
+}
+
+.related h2 {
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+}
+
+.relatedList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  list-style: none;
+}
+
+.relatedList a {
+  display: inline-block;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--color-text);
+}
+
+.relatedList a:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .split {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}

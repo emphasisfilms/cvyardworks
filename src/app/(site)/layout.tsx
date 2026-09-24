@@ -1,6 +1,8 @@
 import Header from "@/components/Header/Header";
 import Footer from "@/components/Footer/Footer";
 import { fetchContent } from "@/lib/supabase/fetchContent";
+import JsonLd from "@/components/JsonLd/JsonLd";
+import { businessJsonLd, websiteJsonLd, graph } from "@/lib/seo";
 
 const DEFAULT_SETTINGS = {
   businessName: 'Connecticut Valley Yard Works',
@@ -23,6 +25,7 @@ export default async function SiteLayout({
 
   return (
     <>
+      <JsonLd data={graph(businessJsonLd(site_settings), websiteJsonLd())} />
       <Header shortName={settings.shortName} />
       <main>{children}</main>
       <Footer settings={settings} />

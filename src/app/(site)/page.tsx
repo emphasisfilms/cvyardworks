@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import JsonLd from '@/components/JsonLd/JsonLd';
+import { SERVICE_PAGES } from '@/lib/service-pages';
+import { AREA_NH, AREA_VT, faqJsonLd, graph, pageMetadata } from '@/lib/seo';
 import Hero from '@/components/Hero/Hero';
 import SeasonalServices from '@/components/SeasonalServices/SeasonalServices';
 import ServiceCard from '@/components/ServiceCard/ServiceCard';
@@ -8,6 +12,32 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fetchContent } from '@/lib/supabase/fetchContent';
 import { getPhotoUrl } from '@/lib/supabase/storage';
 import type { Service } from '@/lib/supabase/content-types';
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Landscaping, Lawn Care & Snow Removal in Walpole, NH | Connecticut Valley Yard Works',
+  description:
+    'Connecticut Valley Yard Works: landscaping, lawn installation, mowing, fall cleanup and snow plowing for homes and businesses in Walpole, NH and the Connecticut River Valley. Free estimates. Call (603) 499-6799.',
+  path: '/',
+});
+
+const HOME_FAQS = [
+  {
+    q: 'What areas does Connecticut Valley Yard Works serve?',
+    a: `We are based in Walpole, NH and serve the Connecticut River Valley on both sides of the river, including ${AREA_NH.slice(0, 6).join(', ')} in New Hampshire and ${AREA_VT.slice(0, 4).join(', ')} in Vermont.`,
+  },
+  {
+    q: 'What services do you offer?',
+    a: 'Landscaping and lawn installation (sod, hydroseeding, hand seeding), spring cleanup and mulching, weekly mowing and lawn care, hedge trimming, fertilizing, fall leaf cleanup, and winter snow plowing, sanding, salting and roof snow removal.',
+  },
+  {
+    q: 'Do you offer free estimates?',
+    a: 'Yes. Request a free estimate online or call (603) 499-6799. We visit the property, then send a written quote with no obligation, usually within 24 hours.',
+  },
+  {
+    q: 'Do you do commercial as well as residential work?',
+    a: 'Yes. We maintain homes, camps, rental properties, associations and commercial lots, and can combine summer lawn care with a winter plowing contract.',
+  },
+];
 
 const DEFAULT_ABOUT = {
   heading: 'Yard Work',
@@ -66,6 +96,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={graph(faqJsonLd(HOME_FAQS))} />
       <Hero content={hero} />
       <SeasonalServices services={services} />
 
@@ -125,6 +156,62 @@ export default async function Home() {
             {services.map((service) => (
               <ServiceCard key={service.id} service={service} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Service Areas */}
+      <section className="section">
+        <div className="container">
+          <div className="grid-2">
+            <div>
+              <h2 className="section-heading">
+                Serving Walpole, NH <span>&amp; the Connecticut Valley</span>
+              </h2>
+              <div className="accent-border-left">
+                <p>
+                  Connecticut Valley Yard Works is a locally owned landscaping and snow removal
+                  company in Walpole, New Hampshire. Our crews work throughout Cheshire and Sullivan
+                  counties and across the river into Windham and Windsor counties, Vermont.
+                </p>
+                <p>
+                  <strong>New Hampshire:</strong> {AREA_NH.join(', ')}.
+                </p>
+                <p>
+                  <strong>Vermont:</strong> {AREA_VT.join(', ')}.
+                </p>
+                <p>
+                  Not on the list? Call us. If you are within reach of Walpole we can probably help.
+                </p>
+              </div>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' as const }}>
+                {SERVICE_PAGES.map((p) => (
+                  <Link key={p.slug} href={`/services/${p.slug}`} className="btn btn-secondary">
+                    {p.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="section-heading">
+                Common <span>Questions</span>
+              </h2>
+              {HOME_FAQS.map((f) => (
+                <details
+                  key={f.q}
+                  style={{
+                    background: 'var(--color-bg-alt)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)',
+                    padding: '14px 18px',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <summary style={{ cursor: 'pointer', fontWeight: 600 }}>{f.q}</summary>
+                  <p style={{ marginTop: '10px', fontSize: '0.95rem' }}>{f.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </div>
       </section>

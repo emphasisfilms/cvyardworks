@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import styles from './Footer.module.css';
 import type { SiteSettingsContent } from '@/lib/supabase/content-types';
+import { SERVICE_PAGES } from '@/lib/service-pages';
 
 const DEFAULT: SiteSettingsContent = {
   businessName: 'Connecticut Valley Yard Works',
@@ -33,8 +34,8 @@ export default function Footer({
             </h3>
             <p className={styles.tagline}>Yard Work: Solved</p>
             <p className={styles.description}>
-              Professional landscaping, lawn care, and snow removal services
-              for the {settings.serviceArea}.
+              Landscaping, lawn care, fall cleanup and snow removal for homes and
+              businesses in {settings.location} and the {settings.serviceArea}.
             </p>
             {(social.facebook || social.instagram) && (
               <div className={styles.social}>
@@ -74,7 +75,12 @@ export default function Footer({
             <h4 className={styles.heading}>Quick Links</h4>
             <nav>
               <Link href="/" className={styles.link}>Home</Link>
-              <Link href="/#services" className={styles.link}>Services</Link>
+              <Link href="/services" className={styles.link}>All Services</Link>
+              {SERVICE_PAGES.map((p) => (
+                <Link key={p.slug} href={`/services/${p.slug}`} className={styles.link}>
+                  {p.name}
+                </Link>
+              ))}
               <Link href="/estimate" className={styles.link}>Free Estimate</Link>
               <Link href="/contact" className={styles.link}>Contact</Link>
               <Link href="/careers" className={styles.link}>Careers</Link>

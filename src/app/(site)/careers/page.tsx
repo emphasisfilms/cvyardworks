@@ -3,16 +3,22 @@ import HireForm from '@/components/HireForm/HireForm';
 import PageHero from '@/components/PageHero/PageHero';
 import styles from './page.module.css';
 import { fetchContent } from '@/lib/supabase/fetchContent';
+import JsonLd from '@/components/JsonLd/JsonLd';
+import { breadcrumbJsonLd, graph, pageMetadata } from '@/lib/seo';
 
 const BANNER_PATH = 'page-banners/careers.jpg';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Join Our Team | Connecticut Valley Yard Works',
-  description:
-    'Join the Connecticut Valley Yard Works team. We are looking for hardworking, reliable individuals to join our landscaping and snow removal crew.',
-};
+const TITLE = 'Landscaping & Snow Removal Jobs in Walpole, NH';
+const DESCRIPTION =
+  'Join the Connecticut Valley Yard Works crew in Walpole, NH. Year-round landscaping, lawn maintenance and snow removal jobs. Apply online.';
+
+export const metadata: Metadata = pageMetadata({
+  title: `${TITLE} | Connecticut Valley Yard Works`,
+  description: DESCRIPTION,
+  path: '/careers',
+});
 
 const DEFAULT = {
   heading: 'Join Our',
@@ -38,6 +44,14 @@ export default async function CareersPage() {
 
   return (
     <>
+      <JsonLd
+        data={graph(
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Careers', path: '/careers' },
+          ])
+        )}
+      />
       <PageHero
         heading={c.heading}
         headingAccent={c.headingAccent}
