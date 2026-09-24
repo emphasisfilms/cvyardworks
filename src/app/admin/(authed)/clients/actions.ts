@@ -1,7 +1,13 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { CLIENT_DAYS, type ClientDay, type ClientRow } from '@/lib/supabase/content-types';
+import {
+  CLIENT_DAYS,
+  CLIENT_TEAMS,
+  type ClientDay,
+  type ClientRow,
+  type ClientTeam,
+} from '@/lib/supabase/content-types';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -9,6 +15,11 @@ function day(v: unknown): ClientDay | null {
   return typeof v === 'string' && (CLIENT_DAYS as readonly string[]).includes(v)
     ? (v as ClientDay)
     : null;
+}
+
+function team(v: unknown): ClientTeam | null {
+  const s = v == null ? '' : String(v).trim();
+  return (CLIENT_TEAMS as readonly string[]).includes(s) ? (s as ClientTeam) : null;
 }
 
 function text(v: unknown, max = 500): string {
@@ -27,7 +38,8 @@ function clean(row: ClientRow): ClientRow {
     service_minutes: mins,
     required_day: day(row.required_day),
     current_day: day(row.current_day),
-    current_team: text(row.current_team, 100) || null,
+    current_team: team(row.current_team),
+    team_required: row.team_required === true,
     notes: text(row.notes, 2000) || null,
     sort_order: Number.isFinite(row.sort_order) ? row.sort_order : 0,
   };

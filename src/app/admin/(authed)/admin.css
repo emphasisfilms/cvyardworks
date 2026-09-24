@@ -586,3 +586,16 @@ a.admin-stat:hover {
   padding: 1px 5px;
   border-radius: 4px;
 }
+
+.admin-check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--admin-accent);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.admin-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}

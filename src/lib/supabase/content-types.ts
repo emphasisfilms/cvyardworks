@@ -186,6 +186,10 @@ export interface CareersApplication {
 export const CLIENT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 export type ClientDay = (typeof CLIENT_DAYS)[number];
 
+// Crews are numbered 1–6.
+export const CLIENT_TEAMS = ['1', '2', '3', '4', '5', '6'] as const;
+export type ClientTeam = (typeof CLIENT_TEAMS)[number];
+
 export interface ClientRow {
   id: string;
   name: string;
@@ -193,7 +197,8 @@ export interface ClientRow {
   service_minutes: number | null;
   required_day: ClientDay | null;
   current_day: ClientDay | null;
-  current_team: string | null;
+  current_team: ClientTeam | null;
+  team_required: boolean; // this property must keep its current team
   notes: string | null;
   sort_order: number;
 }

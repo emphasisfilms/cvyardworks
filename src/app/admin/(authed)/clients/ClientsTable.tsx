@@ -1,7 +1,13 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { CLIENT_DAYS, type ClientDay, type ClientRow } from '@/lib/supabase/content-types';
+import {
+  CLIENT_DAYS,
+  CLIENT_TEAMS,
+  type ClientDay,
+  type ClientRow,
+  type ClientTeam,
+} from '@/lib/supabase/content-types';
 import { deleteClientAction, saveClientsAction } from './actions';
 
 type Toast = { kind: 'success' | 'error'; text: string } | null;
@@ -15,6 +21,7 @@ function newRow(sort: number): ClientRow {
     required_day: null,
     current_day: null,
     current_team: null,
+    team_required: false,
     notes: null,
     sort_order: sort,
   };
@@ -24,6 +31,15 @@ function toDay(v: string): ClientDay | null {
   const s = v.trim().slice(0, 3).toLowerCase();
   const hit = CLIENT_DAYS.find((d) => d.toLowerCase() === s);
   return hit ?? null;
+}
+
+function toTeam(v: string): ClientTeam | null {
+  const s = v.trim().replace(/^(team|crew)\s*/i, '');
+  return (CLIENT_TEAMS as readonly string[]).includes(s) ? (s as ClientTeam) : null;
+}
+
+function toBool(v: string): boolean {
+  return /^(y|yes|true|x|1|required|req)$/i.test(v.trim());
 }
 
 function fmtMins(m: number): string {
@@ -108,9 +124,8 @@ export default function ClientsTable({
     const added: ClientRow[] = [];
     lines.forEach((line, i) => {
       const cells = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name = '', address = '', mins = '', req = '', cur = '', team = ''] = cells.map((c) =>
-        c.trim()
-      );
+      const [name = '', address = '', mins = '', req = '', cur = '', team = '', teamReq = ''] =
+        cells.map((c) => c.trim());
       if (!name || /^name$/i.test(name)) return; // skip header row
       const n = parseInt(mins, 10);
       added.push({
@@ -120,7 +135,8 @@ export default function ClientsTable({
         service_minutes: Number.isFinite(n) ? n : null,
         required_day: toDay(req),
         current_day: toDay(cur),
-        current_team: team || null,
+        current_team: toTeam(team),
+        team_required: toBool(teamReq),
       });
     });
     if (!added.length) {
@@ -137,11 +153,6 @@ export default function ClientsTable({
     setPasteOpen(false);
     flash({ kind: 'success', text: `Added ${added.length} rows — click Save to keep them` });
   }
-
-  const teams = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.current_team).filter(Boolean) as string[])).sort(),
-    [rows]
-  );
 
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -170,7 +181,7 @@ export default function ClientsTable({
   const byTeam = useMemo(() => {
     const m = new Map<string, { n: number; mins: number }>();
     for (const r of rows) {
-      const k = r.current_team ?? 'Unassigned';
+      const k = r.current_team ? `Team ${r.current_team}` : 'Unassigned';
       const e = m.get(k) ?? { n: 0, mins: 0 };
       e.n += 1;
       e.mins += r.service_minutes ?? 0;
@@ -216,14 +227,14 @@ export default function ClientsTable({
           <h2 className="admin-card-title">Paste from a spreadsheet</h2>
           <p className="admin-card-desc">
             One client per line, columns in this order: Name, Address, Service time (minutes),
-            Required day, Current day, Current team. Copy the cells straight out of Excel or
-            Google Sheets. A header row is skipped automatically.
+            Required day, Current day, Current team (1–6), Team required (yes/no). Copy the cells
+            straight out of Excel or Google Sheets. A header row is skipped automatically.
           </p>
           <textarea
             className="admin-textarea"
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={'Smith Residence\t12 Main St, Walpole NH\t45\tAny\tTue\tCrew A'}
+            placeholder={'Smith Residence\t12 Main St, Walpole NH\t45\tAny\tTue\t3\tyes'}
             style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem', minHeight: 140 }}
           />
           <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
@@ -247,13 +258,14 @@ export default function ClientsTable({
               <th>Required day</th>
               <th>Current day</th>
               <th>Current team</th>
+              <th title="Check if this property must keep its current team">Team required</th>
               <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={7} className="admin-table-empty">
+                <td colSpan={8} className="admin-table-empty">
                   {rows.length === 0
                     ? 'No clients yet. Add one, or paste a list from a spreadsheet.'
                     : 'No clients match that filter.'}
@@ -315,14 +327,38 @@ export default function ClientsTable({
                   />
                 </td>
                 <td>
-                  <input
-                    className="admin-input"
-                    list="cvy-teams"
+                  <select
+                    className="admin-select"
                     value={r.current_team ?? ''}
-                    placeholder="Crew"
-                    onChange={(e) => update(r.id, { current_team: e.target.value || null })}
+                    onChange={(e) =>
+                      update(r.id, {
+                        current_team: (e.target.value || null) as ClientTeam | null,
+                        // no team means nothing to require
+                        ...(e.target.value ? {} : { team_required: false }),
+                      })
+                    }
                     disabled={disabled}
-                    style={{ minWidth: 110 }}
+                  >
+                    <option value="">—</option>
+                    {CLIENT_TEAMS.map((t) => (
+                      <option key={t} value={t}>
+                        Team {t}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    checked={r.team_required}
+                    onChange={(e) => update(r.id, { team_required: e.target.checked })}
+                    disabled={disabled || !r.current_team}
+                    title={
+                      r.current_team
+                        ? 'This property must keep its current team'
+                        : 'Pick a team first'
+                    }
                   />
                 </td>
                 <td>
@@ -340,11 +376,6 @@ export default function ClientsTable({
             ))}
           </tbody>
         </table>
-        <datalist id="cvy-teams">
-          {teams.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
       </div>
 
       {rows.length > 0 && (
