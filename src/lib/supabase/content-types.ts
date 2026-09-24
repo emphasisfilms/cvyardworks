@@ -215,4 +215,8 @@ export interface ClientRow {
   active: boolean; // inactive clients are excluded from routes and totals
   notes: string | null;
   sort_order: number;
+  // Map pin. null until the address has been geocoded (or if it failed).
+  lat?: number | null;
+  lng?: number | null;
+  geocode_status?: 'ok' | 'failed' | 'manual' | null;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition, type Dispatch, type SetStateAction } from 'react';
 import Link from 'next/link';
 import {
   CLIENT_DAYS,
@@ -28,6 +28,9 @@ function newRow(sort: number): ClientRow {
     active: true,
     notes: null,
     sort_order: sort,
+    lat: null,
+    lng: null,
+    geocode_status: null,
   };
 }
 
@@ -60,14 +63,17 @@ const hasName = (r: ClientRow) => r.name.trim().length > 0;
 
 export default function ClientsTable({
   initial,
+  rows,
+  setRows,
   teams,
   disabled,
 }: {
   initial: ClientRow[];
+  rows: ClientRow[];
+  setRows: Dispatch<SetStateAction<ClientRow[]>>;
   teams: TeamRow[];
   disabled: boolean;
 }) {
-  const [rows, setRows] = useState<ClientRow[]>(initial);
   const [toast, setToast] = useState<Toast>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
@@ -335,6 +341,12 @@ export default function ClientsTable({
                     placeholder="Street, Town, State"
                     onChange={(e) => update(r.id, { address: e.target.value })}
                     disabled={disabled}
+                    title={
+                      r.geocode_status === 'failed'
+                        ? 'Address not found on the map — check the spelling, or drop a pin on the Map tab'
+                        : undefined
+                    }
+                    style={r.geocode_status === 'failed' ? { borderColor: 'var(--admin-warn)' } : undefined}
                   />
                 </td>
                 <td>

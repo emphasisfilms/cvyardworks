@@ -4,6 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 import type { TeamRow } from '@/lib/supabase/content-types';
 import { AutosaveStatusLine, useAutosave } from '../useAutosave';
 import { deleteTeamAction, saveTeamsAction } from './actions';
+import { teamColor } from '@/lib/team-colors';
 
 type Toast = { kind: 'success' | 'error'; text: string } | null;
 type Load = Record<string, { n: number; mins: number; bagged: number }>;
@@ -98,7 +99,7 @@ export default function TeamsTable({
       <div className="admin-table-wrap">
         <table className="admin-table admin-table-fit">
           <colgroup>
-            <col style={{ width: 70 }} />
+            <col style={{ width: 92 }} />
             <col style={{ width: '22%' }} />
             <col style={{ width: '24%' }} />
             <col style={{ width: 160 }} />
@@ -136,6 +137,11 @@ export default function TeamsTable({
               return (
                 <tr key={r.id} className={auto.dirtyIds.has(r.id) ? 'is-dirty' : undefined}>
                   <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      title="Map pin color"
+                      style={{ width: 12, height: 12, borderRadius: '50%', background: teamColor(r.number), flexShrink: 0 }}
+                    />
                     <input
                       className="admin-input num"
                       type="number"
@@ -146,6 +152,7 @@ export default function TeamsTable({
                       disabled={disabled}
                       style={{ textAlign: 'center' }}
                     />
+                    </div>
                   </td>
                   <td>
                     <input

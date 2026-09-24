@@ -752,3 +752,116 @@ a.admin-stat:hover {
   color: var(--admin-text-dim);
   background: transparent;
 }
+
+/* ---- Tabs (Table / Map) ---- */
+
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--admin-border);
+  margin-bottom: 16px;
+}
+
+.admin-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-tab:hover {
+  color: var(--admin-text);
+}
+
+.admin-tab.is-active {
+  color: var(--admin-accent-hover);
+  border-bottom-color: var(--admin-accent);
+}
+
+.admin-tab-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--admin-bg-inset);
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  color: var(--admin-text-muted);
+}
+
+/* ---- Map ---- */
+
+.cvy-map-wrap {
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.cvy-map {
+  height: min(72vh, 760px);
+  min-height: 420px;
+  width: 100%;
+  background: #e9eeea;
+}
+
+.cvy-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid var(--admin-border);
+  font-size: 0.82rem;
+  color: var(--admin-text-muted);
+}
+
+.cvy-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cvy-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-tooltip.cvy-label {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  box-shadow: none;
+}
+
+.leaflet-tooltip.cvy-label::before {
+  display: none;
+}
+
+.cvy-pop {
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.cvy-pop small {
+  color: var(--admin-text-muted);
+}
