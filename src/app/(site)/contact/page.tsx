@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 const TITLE = 'Contact Us | Landscaping & Snow Removal in Walpole, NH';
 const DESCRIPTION =
-  'Contact Connecticut Valley Yard Works in Walpole, NH for landscaping, lawn care and snow removal. Call or text (603) 499-6799, Mon to Sat 7 AM to 6 PM.';
+  'Contact Connecticut Valley Yard Works in Walpole, NH for landscaping, lawn care and snow removal. Call or text (603) 499-6799, Mon to Fri 8 AM to 4 PM.';
 
 export const metadata: Metadata = pageMetadata({
   title: `${TITLE} | Connecticut Valley Yard Works`,
@@ -27,8 +27,8 @@ const DEFAULT = {
     "We'd love to hear from you. Reach out with any questions about our services.",
   phoneNote: 'Call or text anytime',
   locationNote: 'Serving the Connecticut Valley Region',
-  hoursValue: 'Mon – Sat',
-  hoursNote: '7:00 AM – 6:00 PM',
+  hoursValue: 'Mon – Fri',
+  hoursNote: '8:00 AM – 4:00 PM',
   ctaHeading: 'Need an',
   ctaHeadingAccent: 'Estimate?',
   ctaBody:

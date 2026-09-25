@@ -10,8 +10,8 @@ const DEFAULT = {
     "We'd love to hear from you. Reach out with any questions about our services.",
   phoneNote: 'Call or text anytime',
   locationNote: 'Serving the Connecticut Valley Region',
-  hoursValue: 'Mon – Sat',
-  hoursNote: '7:00 AM – 6:00 PM',
+  hoursValue: 'Mon – Fri',
+  hoursNote: '8:00 AM – 4:00 PM',
   ctaHeading: 'Need an',
   ctaHeadingAccent: 'Estimate?',
   ctaBody:

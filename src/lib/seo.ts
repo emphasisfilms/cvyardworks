@@ -25,9 +25,9 @@ export function absoluteUrl(path: string): string {
   return new URL(path, SITE_URL).toString();
 }
 
-// Parse "Mon – Sat · 7:00 AM – 6:00 PM" into a schema.org OpeningHoursSpecification.
+// Parse "Mon – Fri · 8:00 AM – 4:00 PM" into a schema.org OpeningHoursSpecification.
 function openingHoursFrom(hoursLine: string | undefined) {
-  const line = hoursLine ?? 'Mon – Sat · 7:00 AM – 6:00 PM';
+  const line = hoursLine ?? 'Mon – Fri · 8:00 AM – 4:00 PM';
   const to24 = (t: string) => {
     const m = t.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
     if (!m) return null;

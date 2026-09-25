@@ -53,7 +53,7 @@ export default async function AdminDashboard() {
 
         <Link href="/admin/settings" className="admin-stat">
           <div className="admin-stat-label">Hours</div>
-          <div className="admin-stat-value">{site_settings?.hoursLine ?? 'Mon – Sat · 7:00 AM – 6:00 PM'}</div>
+          <div className="admin-stat-value">{site_settings?.hoursLine ?? 'Mon – Fri · 8:00 AM – 4:00 PM'}</div>
           <div className="admin-stat-hint">Footer and Google structured data</div>
         </Link>
 

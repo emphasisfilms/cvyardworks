@@ -10,7 +10,7 @@ const DEFAULT = {
   phoneTel: '6034996799',
   location: 'Walpole, NH',
   serviceArea: 'Connecticut Valley Region',
-  hoursLine: 'Mon – Sat · 7:00 AM – 6:00 PM',
+  hoursLine: 'Mon – Fri · 8:00 AM – 4:00 PM',
   social: { facebook: null as string | null, instagram: null as string | null },
 };
 
