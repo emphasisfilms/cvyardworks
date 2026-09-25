@@ -2,6 +2,7 @@
 // Business facts here should match the Google Business Profile (NAP).
 
 import type { SiteSettingsContent } from '@/lib/supabase/content-types';
+import { GOOGLE_MAPS_URL } from '@/lib/reviews';
 
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.cvyardworks.com';
@@ -52,7 +53,7 @@ function openingHoursFrom(hoursLine: string | undefined) {
 
 export function businessJsonLd(settings?: SiteSettingsContent | null) {
   const s = settings ?? undefined;
-  const sameAs = [s?.social?.facebook, s?.social?.instagram].filter(Boolean) as string[];
+  const sameAs = [GOOGLE_MAPS_URL, s?.social?.facebook, s?.social?.instagram].filter(Boolean) as string[];
   return {
     '@type': ['LocalBusiness', 'HomeAndConstructionBusiness'],
     '@id': `${SITE_URL}/#business`,

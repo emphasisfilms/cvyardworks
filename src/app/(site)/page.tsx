@@ -6,6 +6,7 @@ import { SERVICE_PAGES } from '@/lib/service-pages';
 import { AREA_NH, AREA_VT, faqJsonLd, graph, pageMetadata } from '@/lib/seo';
 import Hero from '@/components/Hero/Hero';
 import SeasonalServices from '@/components/SeasonalServices/SeasonalServices';
+import Reviews from '@/components/Reviews/Reviews';
 import ServiceCard from '@/components/ServiceCard/ServiceCard';
 import { services as fallbackServices } from '@/data/services';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -159,6 +160,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Reviews */}
+      <Reviews />
 
       {/* Service Areas */}
       <section className="section">
