@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fetchContent } from '@/lib/supabase/fetchContent';
 import { fleetLocateConfig } from '@/lib/fleetlocate';
 import FleetLocateCard from './integrations/FleetLocateCard';
+import AppleMapsCard from './integrations/AppleMapsCard';
+import { appleMapsConfig } from '@/lib/apple-maps';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +125,7 @@ export default async function AdminDashboard() {
         </Link>
 
         <FleetLocateCard config={fleetLocateConfig()} />
+        <AppleMapsCard config={appleMapsConfig()} />
 
         <Link href="/admin/teams" className="admin-stat">
           <div className="admin-stat-label">Crews &amp; teams</div>

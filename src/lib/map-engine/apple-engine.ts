@@ -10,6 +10,7 @@ declare global {
 }
 
 let loader: Promise<typeof mapkit> | null = null;
+let tokenProblem: string | null = null; // why our token endpoint failed, if it did
 let initialized = false; // MapKit only authorizes once per page load
 
 // Load the script and register how to fetch tokens. Safe to call repeatedly.
@@ -27,9 +28,16 @@ function loadMapKit(): Promise<typeof mapkit> {
         language: 'en',
         authorizationCallback: (done) => {
           fetch('/api/mapkit/token', { cache: 'no-store' })
-            .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`token ${r.status}`))))
+            .then(async (r) => {
+              if (!r.ok) throw new Error(`${(await r.text()).slice(0, 120)} (HTTP ${r.status})`);
+              tokenProblem = null;
+              return r.text();
+            })
             .then(done)
-            .catch(() => done('')); // an empty token makes MapKit raise its error event
+            .catch((e: Error) => {
+              tokenProblem = e.message;
+              done(''); // an empty token makes MapKit raise its error event
+            });
         },
       });
       resolve(mk);
@@ -70,7 +78,13 @@ export async function createAppleEngine(el: HTMLElement, opts: EngineOptions): P
       };
       const bad = (e: { status: string }) => {
         cleanup();
-        reject(new Error(`Apple Maps refused to start (${e.status})`));
+        reject(
+          new Error(
+            tokenProblem
+              ? `Apple Maps could not get a token: ${tokenProblem}`
+              : `Apple rejected the map token (${e.status}). Use the Apple Maps test on the Dashboard to see why`
+          )
+        );
       };
       const timer = setTimeout(() => {
         cleanup();

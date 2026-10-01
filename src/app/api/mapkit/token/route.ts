@@ -10,8 +10,12 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new NextResponse('Not signed in', { status: 401 });
   if (!appleMapsReady()) return new NextResponse('Apple Maps is not configured', { status: 503 });
+  // The address the browser sees (not an internal one), which is what Apple
+  // compares the token's origin against.
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host;
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
   try {
-    return new NextResponse(mapkitToken(req.nextUrl.origin), {
+    return new NextResponse(mapkitToken(`${proto}://${host}`), {
       headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' },
     });
   } catch {
