@@ -21,6 +21,7 @@ const TABS: Tab[] = [
   { href: '/admin/clients', label: 'Clients & Routes' },
   { href: '/admin/map', label: 'Map' },
   { href: '/admin/teams', label: 'Crews & Teams' },
+  { href: '/admin/fleet', label: 'Trucks & GPS' },
 ];
 
 export default function AdminShell({
@@ -83,7 +84,8 @@ export default function AdminShell({
         className={`admin-main${
           pathname.startsWith('/admin/clients') ||
           pathname.startsWith('/admin/teams') ||
-          pathname.startsWith('/admin/map')
+          pathname.startsWith('/admin/map') ||
+          pathname.startsWith('/admin/fleet')
             ? ' admin-main-wide'
             : ''
         }`}
