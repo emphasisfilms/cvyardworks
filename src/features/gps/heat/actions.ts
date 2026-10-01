@@ -5,6 +5,7 @@
 
 import { signedInClient } from '../auth';
 import { clusterPoints } from '../shared';
+import { KIND_LABELS } from '@/lib/fleet-places';
 
 export interface HeatSpot {
   lat: number;
@@ -24,7 +25,7 @@ export async function getHeatAction(): Promise<{ ok: true; spots: HeatSpot[] } |
     const { data, error } = await db
       .from('cvy_visits')
       .select('lat, lng, minutes, address')
-      .neq('kind', 'shop')
+      .not('kind', 'in', `(${Object.keys(KIND_LABELS).join(',')})`) // skip the shop, landing…
       .not('lat', 'is', null)
       .not('minutes', 'is', null)
       .order('arrived_at')

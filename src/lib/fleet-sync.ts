@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAssetEvents, fetchFleetAssets, type FleetEvent } from '@/lib/fleetlocate';
 import { detectStops, haversineM, type StopEvent } from '@/lib/fleet-stops';
+import type { FleetPlace } from '@/lib/fleet-places';
 
 const PAGE = 100;
 const MAX_PAGES = 40; // safety cap per window
@@ -65,11 +66,15 @@ export interface VisitClient {
   min: number | null; // this client's share of the stop, in minutes
 }
 
-async function loadMatchContext(db: SupabaseClient): Promise<{ clients: MatchClient[]; shop: ShopLocation | null }> {
-  const [{ data: clientRows }, { data: shopRow }] = await Promise.all([
+async function loadMatchContext(
+  db: SupabaseClient
+): Promise<{ clients: MatchClient[]; shop: ShopLocation | null; places: FleetPlace[] }> {
+  const [{ data: clientRows }, { data: shopRow }, { data: placesRow }] = await Promise.all([
     db.from('cvy_clients').select('*').not('lat', 'is', null),
     db.from('cvy_site_content').select('value').eq('key', 'shop_location').maybeSingle(),
+    db.from('cvy_site_content').select('value').eq('key', 'gps_places').maybeSingle(),
   ]);
+  const places = (Array.isArray(placesRow?.value) ? placesRow.value : []) as FleetPlace[];
   const clients: MatchClient[] = (clientRows ?? [])
     .filter((c) => c.active !== false && typeof c.lat === 'number' && typeof c.lng === 'number')
     .map((c) => ({
@@ -80,7 +85,7 @@ async function loadMatchContext(db: SupabaseClient): Promise<{ clients: MatchCli
       day: (c.current_day as string | null) ?? null,
       team: (c.current_team as string | null) ?? null,
     }));
-  return { clients, shop: (shopRow?.value ?? null) as ShopLocation | null };
+  return { clients, shop: (shopRow?.value ?? null) as ShopLocation | null, places };
 }
 
 // Which clients a stop at (lat, lng) most plausibly served, and how its time
@@ -176,6 +181,7 @@ async function deriveVisits(
   toISO: string,
   clients: MatchClient[],
   shop: ShopLocation | null,
+  places: FleetPlace[],
   vehicleTeam: string | null
 ): Promise<number> {
   const live = new Date(toISO).getTime() > Date.now() - 3600000;
@@ -222,15 +228,21 @@ async function deriveVisits(
         : null;
       if (minutes !== null && minutes < MIN_STOP_MIN) return null;
 
-      let kind: 'client' | 'shop' | 'other' = 'other';
+      let kind: string = 'other'; // client | shop | other | a place kind such as "dump"
       let clientId: string | null = null;
       let served: VisitClient[] = [];
       const atShop =
         !!shop &&
         ((!!shop.match && !!s.address && s.address.toLowerCase().includes(shop.match.toLowerCase())) ||
           (s.lat != null && s.lng != null && haversineM(s.lat, s.lng, shop.lat, shop.lng) <= shop.radius_m));
+      const place =
+        s.lat != null && s.lng != null
+          ? places.find((p) => haversineM(s.lat as number, s.lng as number, p.lat, p.lng) <= p.radius_m)
+          : undefined;
       if (atShop) {
         kind = 'shop';
+      } else if (place) {
+        kind = place.kind; // e.g. the debris landing
       } else if (s.lat != null && s.lng != null) {
         served = matchClients(s.lat, s.lng, s.arrived, minutes, clients, vehicleTeam);
         if (served.length) {
@@ -295,7 +307,7 @@ export async function rebuildVisitsChunk(
     const { data: vrows, error } = await db.from('cvy_vehicles').select('id, team').order('id');
     if (error) throw new Error(error.message);
     const vehicles = vrows ?? [];
-    const { clients, shop } = await loadMatchContext(db);
+    const { clients, shop, places } = await loadMatchContext(db);
     let i = cursor?.i ?? 0;
     let from = cursor?.from ?? null;
     while (i < vehicles.length) {
@@ -313,7 +325,7 @@ export async function rebuildVisitsChunk(
       while (new Date(from).getTime() < Date.now()) {
         if (Date.now() - t0 > budgetMs) return { next: { i, from }, visits, vehicles: vehicles.length };
         const to = new Date(new Date(from).getTime() + 7 * DAY_MS).toISOString();
-        visits += await deriveVisits(db, v.id as string, from, to, clients, shop, (v.team as string | null) ?? null);
+        visits += await deriveVisits(db, v.id as string, from, to, clients, shop, places, (v.team as string | null) ?? null);
         from = to;
       }
       i += 1;
@@ -382,7 +394,7 @@ export async function runFleetSync(
     const vehicles = (vrows ?? []) as VehicleRow[];
 
     // What stops get matched against.
-    const { clients, shop } = await loadMatchContext(db);
+    const { clients, shop, places } = await loadMatchContext(db);
     const teamOf = new Map(vehicles.map((v) => [v.id, v.team]));
 
     // Windows whose visits need (re)deriving: vehicle id -> [from, to]
@@ -434,7 +446,7 @@ export async function runFleetSync(
     // 3. Visits for everything touched.
     for (const [id, w] of touched) {
       if (left() < 1500) break;
-      result.visits += await deriveVisits(db, id, w.from, w.to, clients, shop, teamOf.get(id) ?? null);
+      result.visits += await deriveVisits(db, id, w.from, w.to, clients, shop, places, teamOf.get(id) ?? null);
     }
   } catch (e) {
     result.ok = false;

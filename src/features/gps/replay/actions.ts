@@ -5,6 +5,7 @@
 
 import { signedInClient } from '../auth';
 import { etDayRangeUTC } from '../shared';
+import { KIND_LABELS } from '@/lib/fleet-places';
 
 export interface ReplayPoint {
   t: number; // epoch ms
@@ -101,7 +102,7 @@ export async function getReplayAction(
       lat: v.lat,
       lng: v.lng,
       kind: v.kind,
-      label: v.kind === 'shop' ? 'Shop' : served.length ? served.join(', ') : v.address ?? 'Stop',
+      label: KIND_LABELS[v.kind] ?? (served.length ? served.join(', ') : v.address ?? 'Stop'),
     };
   });
 

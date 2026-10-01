@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fleetLocateReady } from '@/lib/fleetlocate';
 import type { TeamRow } from '@/lib/supabase/content-types';
+import { KIND_LABELS } from '@/lib/fleet-places';
 import FleetPanel, { type LogRow, type VehicleView, type VisitView } from './FleetPanel';
 import StatusBoard from '@/features/gps/status-board/StatusBoard'; // feature: status-board
 import { loadStatusBoard } from '@/features/gps/status-board/data'; // feature: status-board
@@ -71,9 +72,7 @@ export default async function AdminFleetPage() {
     place:
       v.kind === 'client'
         ? servedOf(v).map((c) => clientName.get(c.id) ?? 'Client').join(', ')
-        : v.kind === 'shop'
-          ? 'Shop'
-          : v.address ?? 'Unknown location',
+        : KIND_LABELS[v.kind] ?? v.address ?? 'Unknown location',
     clientCount: v.kind === 'client' ? servedOf(v).length : 0,
     kind: v.kind,
     arrivedAt: v.arrived_at,

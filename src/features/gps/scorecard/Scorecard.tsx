@@ -33,7 +33,7 @@ export default function Scorecard() {
   }, [day]);
 
   const worked = (rows ?? []).filter((r) => r.drivingMin > 0 || r.stops > 0);
-  const total = (k: 'miles' | 'stops' | 'onSiteMin' | 'drivingMin' | 'idleMin') =>
+  const total = (k: 'miles' | 'stops' | 'dumpRuns' | 'onSiteMin' | 'drivingMin' | 'idleMin') =>
     worked.reduce((t, r) => t + (r[k] ?? 0), 0);
 
   return (
@@ -53,6 +53,7 @@ export default function Scorecard() {
               <th>Back</th>
               <th className="num">Miles</th>
               <th className="num">Stops</th>
+              <th className="num" title="Trips to the debris landing">Landing</th>
               <th className="num">On site</th>
               <th className="num">Driving</th>
               <th className="num" title="Engine running while parked">Idling</th>
@@ -61,7 +62,7 @@ export default function Scorecard() {
           <tbody>
             {rows && worked.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ color: 'var(--admin-text-muted)' }}>No trucks went out that day.</td>
+                <td colSpan={9} style={{ color: 'var(--admin-text-muted)' }}>No trucks went out that day.</td>
               </tr>
             )}
             {worked.map((r) => (
@@ -77,6 +78,7 @@ export default function Scorecard() {
                   {r.stops}
                   {r.clientStops > 0 ? ` (${r.clientStops})` : ''}
                 </td>
+                <td className="num">{r.dumpRuns || '—'}</td>
                 <td className="num">{fmtMins(r.onSiteMin)}</td>
                 <td className="num">{fmtMins(r.drivingMin)}</td>
                 <td className="num">{r.idleMin ? fmtMins(r.idleMin) : '—'}</td>
@@ -89,6 +91,7 @@ export default function Scorecard() {
                 <td />
                 <td className="num">{total('miles').toFixed(1)}</td>
                 <td className="num">{total('stops')}</td>
+                <td className="num">{total('dumpRuns')}</td>
                 <td className="num">{fmtMins(total('onSiteMin'))}</td>
                 <td className="num">{fmtMins(total('drivingMin'))}</td>
                 <td className="num">{fmtMins(total('idleMin'))}</td>

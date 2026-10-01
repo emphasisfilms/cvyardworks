@@ -6,6 +6,7 @@
 
 import { signedInClient } from '../auth';
 import { etDayRangeUTC } from '../shared';
+import { isOperational } from '@/lib/fleet-places';
 
 export interface ScoreRow {
   id: string;
@@ -14,7 +15,8 @@ export interface ScoreRow {
   leftShop: string | null;
   backAtShop: string | null;
   miles: number | null;
-  stops: number; // stops away from the shop
+  stops: number; // stops at clients or unknown places (not the shop or landing)
+  dumpRuns: number; // trips to the debris landing
   clientStops: number;
   onSiteMin: number; // parked away from the shop
   drivingMin: number;
@@ -78,7 +80,8 @@ export async function getScorecardAction(
       const d = Math.min(dayEnd, s.departed_at ? new Date(s.departed_at).getTime() : dayEnd);
       return Math.max(0, Math.round((d - a) / 60000));
     };
-    const away = vs.filter((s) => s.kind !== 'shop' && new Date(s.arrived_at).getTime() >= dayStart);
+    const today = vs.filter((s) => new Date(s.arrived_at).getTime() >= dayStart);
+    const away = today.filter((s) => !isOperational(s.kind));
     const shop = vs.filter((s) => s.kind === 'shop');
     const left = shop.find((s) => s.departed_at && new Date(s.departed_at).getTime() >= dayStart);
     const back = [...shop].reverse().find((s) => new Date(s.arrived_at).getTime() >= dayStart && (!left || s.arrived_at > left.departed_at!));
@@ -91,6 +94,7 @@ export async function getScorecardAction(
       backAtShop: back?.arrived_at ?? null,
       miles: miles != null ? Math.round(miles * 10) / 10 : null,
       stops: away.length,
+      dumpRuns: today.filter((s) => s.kind === 'dump').length,
       clientStops: away.filter((s) => s.kind === 'client').length,
       onSiteMin: away.reduce((t, s) => t + within(s), 0),
       drivingMin,

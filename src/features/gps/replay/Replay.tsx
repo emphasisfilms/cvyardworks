@@ -15,7 +15,7 @@ const SPEEDS = [
   { label: '15 min/sec', rate: 900 },
 ];
 
-const STOP_COLORS: Record<string, string> = { client: '#2f7a3e', shop: '#b7791f', other: '#5b6b60' };
+const STOP_COLORS: Record<string, string> = { client: '#2f7a3e', shop: '#b7791f', dump: '#8e5a2b', other: '#5b6b60' };
 
 export default function Replay({ ctx }: { ctx: MapCtx }) {
   const [open, setOpen] = useState(false);

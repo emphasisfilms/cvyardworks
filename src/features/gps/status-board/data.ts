@@ -3,6 +3,7 @@
 // src/app/admin/(authed)/fleet/page.tsx.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { KIND_LABELS } from '@/lib/fleet-places';
 
 export interface StatusRow {
   id: string;
@@ -64,7 +65,11 @@ async function loadRows(db: SupabaseClient): Promise<StatusRow[]> {
             : [];
       place = {
         kind: stop.kind,
-        label: stop.kind === 'shop' ? 'the shop' : served.length ? served.join(', ') : stop.address ?? 'an unknown stop',
+        label: KIND_LABELS[stop.kind]
+          ? `the ${KIND_LABELS[stop.kind].toLowerCase()}`
+          : served.length
+            ? served.join(', ')
+            : stop.address ?? 'an unknown stop',
         since: stop.arrived_at,
       };
     }

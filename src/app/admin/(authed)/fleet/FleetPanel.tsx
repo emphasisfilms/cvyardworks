@@ -407,8 +407,11 @@ export default function FleetPanel({
                         {v.clientCount > 1 ? `${v.clientCount} clients` : 'Client'}
                       </span>
                     )}
-                    {v.kind === 'shop' && <span className="admin-pill admin-pill-warn" style={{ marginRight: 6 }}>Shop</span>}
-                    {v.kind === 'shop' ? '' : v.place}
+                    {v.kind !== 'client' && v.kind !== 'other' ? (
+                      <span className="admin-pill admin-pill-warn">{v.place}</span>
+                    ) : (
+                      v.place
+                    )}
                   </td>
                   <td>{when(v.arrivedAt)}</td>
                   <td>{v.departedAt ? when(v.departedAt) : '—'}</td>
