@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOutAction } from '../actions';
@@ -32,6 +32,10 @@ export default function AdminShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  // Highlight the clicked tab straight away, before the new page arrives.
+  // `from` remembers where the click happened so the hint expires on arrival.
+  const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
+  const current = pending && pending.from === pathname ? pending.href : pathname;
 
   return (
     <div className="admin-root">
@@ -45,13 +49,14 @@ export default function AdminShell({
           {TABS.map((tab) => {
             const active =
               tab.href === '/admin'
-                ? pathname === '/admin'
-                : pathname.startsWith(tab.href);
+                ? current === '/admin'
+                : current.startsWith(tab.href);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 className={`admin-nav-link${active ? ' is-active' : ''}`}
+                onClick={() => setPending({ href: tab.href, from: pathname })}
               >
                 {tab.label}
               </Link>
