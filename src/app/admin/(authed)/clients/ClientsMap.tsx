@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import type * as Leaflet from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CLIENT_DAYS, type ClientRow, type TeamRow } from '@/lib/supabase/content-types';
 import { teamColor, UNASSIGNED_COLOR } from '@/lib/team-colors';
 import { geocodeMissingAction, getFleetPositionsAction, setClientPinAction } from './actions';
 import type { FleetAsset } from '@/lib/fleetlocate';
+import type { MapCtx } from '@/features/gps/map-types';
 
 // Walpole, NH — where the map opens when there are no pins yet.
 const HOME: [number, number] = [43.0743, -72.4262];
@@ -47,6 +48,7 @@ export default function ClientsMap({
   disabled,
   geoReady,
   fleetReady,
+  extras,
 }: {
   rows: ClientRow[];
   setRows: Dispatch<SetStateAction<ClientRow[]>>;
@@ -54,6 +56,8 @@ export default function ClientsMap({
   disabled: boolean;
   geoReady: boolean;
   fleetReady: boolean;
+  // Optional add-on tools drawn above the map. They get the live map to draw on.
+  extras?: (ctx: MapCtx) => ReactNode;
 }) {
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
@@ -70,6 +74,7 @@ export default function ClientsMap({
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
   const [placing, setPlacing] = useState<ClientRow | null>(null);
   const [ready, setReady] = useState(false); // flips once Leaflet has built the map
+  const [ctx, setCtx] = useState<MapCtx | null>(null); // handed to `extras`
   const [showTrucks, setShowTrucks] = useState(true);
   const [trucks, setTrucks] = useState<FleetAsset[]>([]);
   const [truckMsg, setTruckMsg] = useState<string | null>(null);
@@ -130,6 +135,7 @@ export default function ClientsMap({
       mapRef.current = map;
       setTimeout(() => map.invalidateSize(), 50);
       setReady(true);
+      setCtx({ map, L });
     })();
     return () => {
       cancelled = true;
@@ -138,6 +144,7 @@ export default function ClientsMap({
       layerRef.current = null;
       truckLayerRef.current = null;
       setReady(false);
+      setCtx(null);
     };
   }, [setRows]);
 
@@ -174,6 +181,7 @@ export default function ClientsMap({
           <strong>${esc(r.name)}</strong><br>${esc(r.address)}<br>
           <span style="color:${color};font-weight:600">${esc(teamLabel)}</span> · ${r.current_day ?? 'No day'} · ${fmtMins(r.service_minutes)}
           ${flags.length ? `<br><small>${flags.map(esc as (s: string | null) => string).join(' · ')}</small>` : ''}
+          <div class="cvy-pop-extra" data-client="${r.id}"></div>
         </div>`
       );
       if (labels) {
@@ -383,6 +391,8 @@ export default function ClientsMap({
           </button>
         </div>
       )}
+
+      {ctx && extras?.(ctx)}
 
       <div className="cvy-map-wrap">
         <div ref={mapEl} className="cvy-map" style={placing ? { cursor: 'crosshair' } : undefined} />

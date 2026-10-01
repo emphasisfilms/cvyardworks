@@ -2,6 +2,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fleetLocateReady } from '@/lib/fleetlocate';
 import type { TeamRow } from '@/lib/supabase/content-types';
 import FleetPanel, { type LogRow, type VehicleView, type VisitView } from './FleetPanel';
+import StatusBoard from '@/features/gps/status-board/StatusBoard'; // feature: status-board
+import { loadStatusBoard } from '@/features/gps/status-board/data'; // feature: status-board
+import Scorecard from '@/features/gps/scorecard/Scorecard'; // feature: scorecard
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -99,6 +102,11 @@ export default async function AdminFleetPage() {
       {!missingTable && vehiclesRes.error && (
         <div className="admin-notice">Couldn’t load trucks: {vehiclesRes.error.message}</div>
       )}
+
+      {/* feature: status-board */}
+      {!vehiclesRes.error && <StatusBoard data={await loadStatusBoard(supabase)} />}
+      {/* feature: scorecard */}
+      {!vehiclesRes.error && <Scorecard />}
 
       <FleetPanel
         vehicles={vehicles}
