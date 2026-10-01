@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TeamRow } from '@/lib/supabase/content-types';
 import { teamColor } from '@/lib/team-colors';
-import { setShopFromTrucksAction, setVehicleTeamAction, syncNowAction } from './actions';
+import { rebuildVisitsAction, setShopFromTrucksAction, setVehicleTeamAction, syncNowAction } from './actions';
 
 export interface VehicleView {
   id: string;
@@ -23,6 +23,7 @@ export interface VisitView {
   id: string;
   truck: string;
   place: string;
+  clientCount: number;
   kind: string;
   arrivedAt: string;
   departedAt: string | null;
@@ -86,7 +87,7 @@ export default function FleetPanel({
   disabled: boolean;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<null | 'sync' | 'backfill' | 'shop'>(null);
+  const [busy, setBusy] = useState<null | 'sync' | 'backfill' | 'shop' | 'rebuild'>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [teamOf, setTeamOf] = useState<Record<string, string | null>>(
     Object.fromEntries(vehicles.map((v) => [v.id, v.team]))
@@ -128,6 +129,30 @@ export default function FleetPanel({
         setMsg({ kind: 'ok', text: `History loaded: ${days} truck-days read, ${events} events saved.` });
         break;
       }
+    }
+    setBusy(null);
+    router.refresh();
+  }
+
+  // Re-derive every stop from the saved events (used after matching rules change).
+  async function rebuildStops() {
+    setBusy('rebuild');
+    stop.current = false;
+    let total = 0;
+    let cursor: Parameters<typeof rebuildVisitsAction>[0] = null;
+    for (let i = 0; i < 400 && !stop.current; i++) {
+      const res = await rebuildVisitsAction(cursor);
+      if (res.error) {
+        setMsg({ kind: 'err', text: res.error });
+        break;
+      }
+      total += res.visits;
+      if (!res.next) {
+        setMsg({ kind: 'ok', text: `Stops rebuilt: ${total.toLocaleString('en-US')} stops across ${res.vehicles} trucks.` });
+        break;
+      }
+      setMsg({ kind: 'ok', text: `Rebuilding stops… truck ${res.next.i + 1} of ${res.vehicles}, ${total.toLocaleString('en-US')} so far.` });
+      cursor = res.next;
     }
     setBusy(null);
     router.refresh();
@@ -197,7 +222,7 @@ export default function FleetPanel({
         <button className="admin-btn" onClick={syncOnce} disabled={disabled || !fleetReady || busy !== null}>
           {busy === 'sync' ? 'Syncing…' : 'Sync now'}
         </button>
-        {busy === 'backfill' ? (
+        {busy === 'backfill' || busy === 'rebuild' ? (
           <button className="admin-btn admin-btn-secondary" onClick={() => (stop.current = true)}>
             Stop
           </button>
@@ -211,6 +236,14 @@ export default function FleetPanel({
             Load history
           </button>
         )}
+        <button
+          className="admin-btn admin-btn-secondary"
+          onClick={rebuildStops}
+          disabled={disabled || busy !== null || vehicles.length === 0}
+          title="Re-work every stop from the saved GPS events, using the current client pins and rules"
+        >
+          {busy === 'rebuild' ? 'Rebuilding…' : 'Rebuild stops'}
+        </button>
         {msg && (
           <span className="admin-field-hint" style={{ color: msg.kind === 'ok' ? 'var(--admin-ok)' : 'var(--admin-danger)' }}>
             {msg.text}
@@ -345,7 +378,8 @@ export default function FleetPanel({
       <section className="admin-card" style={{ marginTop: 16 }}>
         <h2 className="admin-card-title">Recent stops</h2>
         <p className="admin-card-desc">
-          The latest 40 stops across all trucks. A stop within 120 m of a client pin is logged as a visit to that client.
+          The latest 40 stops across all trucks. A stop is linked to every client pin within 250 m of where the
+          truck parked, since one parking spot often serves several neighbours. Its time is shared between them.
         </p>
         <div className="admin-summary" style={{ display: 'block', marginTop: 0 }}>
           <table>
@@ -368,7 +402,11 @@ export default function FleetPanel({
                 <tr key={v.id}>
                   <td>{v.truck}</td>
                   <td>
-                    {v.kind === 'client' && <span className="admin-pill" style={{ marginRight: 6 }}>Client</span>}
+                    {v.kind === 'client' && (
+                      <span className="admin-pill" style={{ marginRight: 6 }}>
+                        {v.clientCount > 1 ? `${v.clientCount} clients` : 'Client'}
+                      </span>
+                    )}
                     {v.kind === 'shop' && <span className="admin-pill admin-pill-warn" style={{ marginRight: 6 }}>Shop</span>}
                     {v.kind === 'shop' ? '' : v.place}
                   </td>

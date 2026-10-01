@@ -16,8 +16,11 @@ import { detectStops, haversineM, type StopEvent } from '@/lib/fleet-stops';
 const PAGE = 100;
 const MAX_PAGES = 40; // safety cap per window
 const BACKFILL_DAYS = Number(process.env.FLEET_BACKFILL_DAYS ?? 120);
-const CLIENT_RADIUS_M = 120; // a stop this close to a client pin counts as a visit
-const MIN_STOP_MIN = 2;
+// Crews often park in one spot and service several neighbouring clients on
+// foot, so a stop is linked to every client pin within this distance.
+const CLIENT_RADIUS_M = 250;
+const MIN_STOP_MIN = 3; // shorter dwells are traffic, not stops
+const WEEKDAY = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'America/New_York' });
 const DAY_MS = 86400000;
 
 export interface SyncResult {
@@ -34,6 +37,7 @@ export interface SyncResult {
 
 interface VehicleRow {
   id: string;
+  team: string | null;
   last_event_at: string | null;
   backfill_day: string | null;
   backfill_done: boolean;
@@ -43,6 +47,78 @@ interface ShopLocation {
   lat: number;
   lng: number;
   radius_m: number;
+  match?: string; // any stop whose address contains this is the shop (e.g. "Levi L")
+}
+
+interface MatchClient {
+  id: string;
+  lat: number;
+  lng: number;
+  minutes: number | null; // estimated service time, used to share a stop's time
+  day: string | null;
+  team: string | null;
+}
+
+export interface VisitClient {
+  id: string;
+  m: number; // metres from where the truck parked
+  min: number | null; // this client's share of the stop, in minutes
+}
+
+async function loadMatchContext(db: SupabaseClient): Promise<{ clients: MatchClient[]; shop: ShopLocation | null }> {
+  const [{ data: clientRows }, { data: shopRow }] = await Promise.all([
+    db.from('cvy_clients').select('*').not('lat', 'is', null),
+    db.from('cvy_site_content').select('value').eq('key', 'shop_location').maybeSingle(),
+  ]);
+  const clients: MatchClient[] = (clientRows ?? [])
+    .filter((c) => c.active !== false && typeof c.lat === 'number' && typeof c.lng === 'number')
+    .map((c) => ({
+      id: c.id as string,
+      lat: c.lat as number,
+      lng: c.lng as number,
+      minutes: typeof c.service_minutes === 'number' ? c.service_minutes : null,
+      day: (c.current_day as string | null) ?? null,
+      team: (c.current_team as string | null) ?? null,
+    }));
+  return { clients, shop: (shopRow?.value ?? null) as ShopLocation | null };
+}
+
+// Which clients a stop at (lat, lng) most plausibly served, and how its time
+// divides between them.
+function matchClients(
+  lat: number,
+  lng: number,
+  arrivedISO: string,
+  minutes: number | null,
+  clients: MatchClient[],
+  vehicleTeam: string | null
+): VisitClient[] {
+  const near = clients
+    .map((c) => ({ c, m: haversineM(lat, lng, c.lat, c.lng) }))
+    .filter((x) => x.m <= CLIENT_RADIUS_M)
+    .sort((a, b) => a.m - b.m);
+  if (near.length === 0) return [];
+
+  // If the schedule says some of them are due that weekday (for this truck's
+  // team, when known), those are the ones being serviced.
+  const weekday = WEEKDAY.format(new Date(arrivedISO));
+  const due = near.filter(
+    (x) => x.c.day === weekday && (!vehicleTeam || !x.c.team || x.c.team === vehicleTeam)
+  );
+  const pool = due.length ? due : near;
+
+  // Share the stop's time by estimated service time when every client has one,
+  // otherwise evenly.
+  const allEstimated = pool.every((x) => (x.c.minutes ?? 0) > 0);
+  const totalWeight = allEstimated ? pool.reduce((t, x) => t + (x.c.minutes as number), 0) : pool.length;
+  return pool.map((x) => ({
+    id: x.c.id,
+    m: Math.round(x.m),
+    min:
+      minutes == null
+        ? null
+        : Math.round((minutes * (allEstimated ? (x.c.minutes as number) : 1)) / totalWeight),
+  }));
 }
 
 const dayStr = (d: Date) => d.toISOString().slice(0, 10);
@@ -98,8 +174,9 @@ async function deriveVisits(
   vehicleId: string,
   fromISO: string,
   toISO: string,
-  clients: { id: string; lat: number; lng: number }[],
-  shop: ShopLocation | null
+  clients: MatchClient[],
+  shop: ShopLocation | null,
+  vehicleTeam: string | null
 ): Promise<number> {
   const live = new Date(toISO).getTime() > Date.now() - 3600000;
   // For a past window, read a few days further so a stop that began inside the
@@ -147,21 +224,24 @@ async function deriveVisits(
 
       let kind: 'client' | 'shop' | 'other' = 'other';
       let clientId: string | null = null;
-      if (s.lat != null && s.lng != null) {
-        let best = CLIENT_RADIUS_M;
-        for (const c of clients) {
-          const d = haversineM(s.lat, s.lng, c.lat, c.lng);
-          if (d <= best) {
-            best = d;
-            clientId = c.id; // nearest client inside the radius
-          }
+      let served: VisitClient[] = [];
+      const atShop =
+        !!shop &&
+        ((!!shop.match && !!s.address && s.address.toLowerCase().includes(shop.match.toLowerCase())) ||
+          (s.lat != null && s.lng != null && haversineM(s.lat, s.lng, shop.lat, shop.lng) <= shop.radius_m));
+      if (atShop) {
+        kind = 'shop';
+      } else if (s.lat != null && s.lng != null) {
+        served = matchClients(s.lat, s.lng, s.arrived, minutes, clients, vehicleTeam);
+        if (served.length) {
+          kind = 'client';
+          clientId = served[0].id; // nearest; the full list is in `clients`
         }
-        if (clientId) kind = 'client';
-        else if (shop && haversineM(s.lat, s.lng, shop.lat, shop.lng) <= shop.radius_m) kind = 'shop';
       }
       return {
         vehicle_id: vehicleId,
         client_id: clientId,
+        clients: served.length ? served : null,
         kind,
         arrived_at: s.arrived,
         departed_at: s.departed,
@@ -183,9 +263,66 @@ async function deriveVisits(
   if (delErr) throw new Error(`Clearing visits: ${delErr.message}`);
 
   if (rows.length === 0) return 0;
-  const { error } = await db.from('cvy_visits').upsert(rows, { onConflict: 'vehicle_id,arrived_at' });
+  let { error } = await db.from('cvy_visits').upsert(rows, { onConflict: 'vehicle_id,arrived_at' });
+  if (error && /clients/.test(error.message)) {
+    // Migration 012 not run yet: save without the multi-client list rather than fail.
+    const plain = rows.map((r) => {
+      const copy: Record<string, unknown> = { ...r };
+      delete copy.clients;
+      return copy;
+    });
+    ({ error } = await db.from('cvy_visits').upsert(plain, { onConflict: 'vehicle_id,arrived_at' }));
+  }
   if (error) throw new Error(`Saving visits: ${error.message}`);
   return rows.length;
+}
+
+export interface RebuildCursor {
+  i: number; // vehicle index
+  from: string | null; // next window start for that vehicle
+}
+
+// Re-derive every stop from the stored events, a week at a time, within a
+// time budget. Call repeatedly with the returned cursor until it is null.
+export async function rebuildVisitsChunk(
+  db: SupabaseClient,
+  cursor: RebuildCursor | null,
+  budgetMs: number
+): Promise<{ next: RebuildCursor | null; visits: number; vehicles: number; error?: string }> {
+  const t0 = Date.now();
+  let visits = 0;
+  try {
+    const { data: vrows, error } = await db.from('cvy_vehicles').select('id, team').order('id');
+    if (error) throw new Error(error.message);
+    const vehicles = vrows ?? [];
+    const { clients, shop } = await loadMatchContext(db);
+    let i = cursor?.i ?? 0;
+    let from = cursor?.from ?? null;
+    while (i < vehicles.length) {
+      const v = vehicles[i];
+      if (!from) {
+        const { data: first } = await db
+          .from('cvy_gps_events')
+          .select('at')
+          .eq('vehicle_id', v.id)
+          .order('at')
+          .limit(1);
+        if (!first?.[0]) { i += 1; continue; }
+        from = `${(first[0].at as string).slice(0, 10)}T00:00:00.000Z`;
+      }
+      while (new Date(from).getTime() < Date.now()) {
+        if (Date.now() - t0 > budgetMs) return { next: { i, from }, visits, vehicles: vehicles.length };
+        const to = new Date(new Date(from).getTime() + 7 * DAY_MS).toISOString();
+        visits += await deriveVisits(db, v.id as string, from, to, clients, shop, (v.team as string | null) ?? null);
+        from = to;
+      }
+      i += 1;
+      from = null;
+    }
+    return { next: null, visits, vehicles: vehicles.length };
+  } catch (e) {
+    return { next: cursor, visits, vehicles: 0, error: (e as Error).message };
+  }
 }
 
 export async function runFleetSync(
@@ -239,18 +376,14 @@ export async function runFleetSync(
 
     const { data: vrows, error: vErr } = await db
       .from('cvy_vehicles')
-      .select('id, last_event_at, backfill_day, backfill_done')
+      .select('id, team, last_event_at, backfill_day, backfill_done')
       .eq('active', true);
     if (vErr) throw new Error(`Reading vehicles: ${vErr.message}`);
     const vehicles = (vrows ?? []) as VehicleRow[];
 
     // What stops get matched against.
-    const [{ data: clientRows }, { data: shopRow }] = await Promise.all([
-      db.from('cvy_clients').select('id, lat, lng').not('lat', 'is', null),
-      db.from('cvy_site_content').select('value').eq('key', 'shop_location').maybeSingle(),
-    ]);
-    const clients = (clientRows ?? []) as { id: string; lat: number; lng: number }[];
-    const shop = (shopRow?.value ?? null) as ShopLocation | null;
+    const { clients, shop } = await loadMatchContext(db);
+    const teamOf = new Map(vehicles.map((v) => [v.id, v.team]));
 
     // Windows whose visits need (re)deriving: vehicle id -> [from, to]
     const touched = new Map<string, { from: string; to: string }>();
@@ -301,7 +434,7 @@ export async function runFleetSync(
     // 3. Visits for everything touched.
     for (const [id, w] of touched) {
       if (left() < 1500) break;
-      result.visits += await deriveVisits(db, id, w.from, w.to, clients, shop);
+      result.visits += await deriveVisits(db, id, w.from, w.to, clients, shop, teamOf.get(id) ?? null);
     }
   } catch (e) {
     result.ok = false;

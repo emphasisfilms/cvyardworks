@@ -15,7 +15,7 @@ export default async function AdminFleetPage() {
     supabase.from('cvy_gps_sync_log').select('*').order('ran_at', { ascending: false }).limit(6),
     supabase
       .from('cvy_visits')
-      .select('id, vehicle_id, client_id, kind, arrived_at, departed_at, minutes, address')
+      .select('*')
       .order('arrived_at', { ascending: false })
       .limit(40),
     supabase.from('cvy_site_content').select('value').eq('key', 'shop_location').maybeSingle(),
@@ -46,7 +46,16 @@ export default async function AdminFleetPage() {
   }));
 
   // Names for the recent-visits list.
-  const clientIds = Array.from(new Set((visitsRes.data ?? []).map((v) => v.client_id).filter(Boolean))) as string[];
+  type Served = { id: string; m: number; min: number | null };
+  const servedOf = (v: { clients?: unknown; client_id?: string | null }): Served[] =>
+    Array.isArray(v.clients) && v.clients.length
+      ? (v.clients as Served[])
+      : v.client_id
+        ? [{ id: v.client_id, m: 0, min: null }]
+        : [];
+  const clientIds = Array.from(
+    new Set((visitsRes.data ?? []).flatMap((v) => servedOf(v).map((c) => c.id)))
+  ) as string[];
   const { data: clientRows } = clientIds.length
     ? await supabase.from('cvy_clients').select('id, name').in('id', clientIds)
     : { data: [] as { id: string; name: string }[] };
@@ -58,10 +67,11 @@ export default async function AdminFleetPage() {
     truck: vehicleName.get(v.vehicle_id) ?? v.vehicle_id,
     place:
       v.kind === 'client'
-        ? clientName.get(v.client_id) ?? 'Client'
+        ? servedOf(v).map((c) => clientName.get(c.id) ?? 'Client').join(', ')
         : v.kind === 'shop'
           ? 'Shop'
           : v.address ?? 'Unknown location',
+    clientCount: v.kind === 'client' ? servedOf(v).length : 0,
     kind: v.kind,
     arrivedAt: v.arrived_at,
     departedAt: v.departed_at,

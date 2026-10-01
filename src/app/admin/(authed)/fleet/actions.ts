@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { fetchFleetAssets, fleetLocateReady } from '@/lib/fleetlocate';
-import { runFleetSync, type SyncResult } from '@/lib/fleet-sync';
+import { rebuildVisitsChunk, runFleetSync, type RebuildCursor, type SyncResult } from '@/lib/fleet-sync';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -77,4 +77,15 @@ export async function setShopFromTrucksAction(): Promise<ShopResult> {
     .upsert({ key: 'shop_location', value: { ...cur, lat, lng, radius_m: 150 } }, { onConflict: 'key' });
   if (error) return { ok: false, error: error.message };
   return { ok: true, lat, lng, trucks: near.length };
+}
+
+
+// Re-derive all stops from the saved events (after the matching rules change).
+export async function rebuildVisitsAction(
+  cursor: RebuildCursor | null
+): Promise<{ next: RebuildCursor | null; visits: number; vehicles: number; error?: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { next: cursor, visits: 0, vehicles: 0, error: 'Not signed in' };
+  return rebuildVisitsChunk(supabase, cursor, 35000);
 }
