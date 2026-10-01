@@ -20,18 +20,34 @@ Search for a marker with:
 | `trails` | `trails/` | Map, "Today's trails" toggle | `MapGpsTools.tsx` | none |
 | `heat` | `heat/` | Map, "Time heat map" toggle | `MapGpsTools.tsx` | none |
 
+## The map engine
+
+The admin map and every map feature draw through `src/lib/map-engine/`, never
+through a map library directly.
+
+- `types.ts` — the small interface: pins, lines, circles, layers, fit, click.
+- `apple-engine.ts` — Apple Maps (MapKit JS). The one we want.
+- `leaflet-engine.ts` — OpenStreetMap fallback, used only if Apple Maps is not
+  configured or refuses to start. **Removable** once Apple is proven in
+  production: delete the file, delete the two fallback branches in `index.ts`,
+  and run `npm uninstall leaflet @types/leaflet`.
+- `src/lib/apple-maps.ts` and `src/app/api/mapkit/token/` — sign and serve the
+  short-lived Apple token. Needs `APPLE_MAPS_TEAM_ID`, `APPLE_MAPS_KEY_ID`,
+  `APPLE_MAPS_PRIVATE_KEY` on Vercel (same three app.emphasis uses).
+
 ## Shared pieces (keep while any feature remains)
 
 - `shared.ts` — Eastern-time date helpers, formatting, `clusterPoints`.
 - `auth.ts` — `signedInClient()`, the sign-in check every action starts with.
-- `map-types.ts` — the `{ map, L }` handed to map features.
+- `map-types.ts` — the `{ engine }` handed to map features.
 - `MapGpsTools.tsx` — the tool row above the map; one line per map feature.
 
 Two generic hooks in the map itself make the map features possible. They do
 nothing when no feature uses them:
 
-- `ClientsMap` accepts an `extras` render prop and calls it with the live map.
-- Each client popup ends with an empty `<div class="cvy-pop-extra" data-client="…">`.
+- `ClientsMap` accepts an `extras` render prop and calls it with the engine.
+- Each client popup ends with an empty `<div class="cvy-pop-extra" data-client="…">`,
+  and opening one fires a `cvy:client-popup` event on `document`.
 
 If every map feature is removed, also delete `MapGpsTools.tsx`, the `extras`
 prop passed in `map/MapView.tsx`, and (optionally) those two hooks.

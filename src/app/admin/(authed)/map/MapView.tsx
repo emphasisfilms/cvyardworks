@@ -11,12 +11,14 @@ export default function MapView({
   disabled,
   geoReady,
   fleetReady,
+  appleReady,
 }: {
   initial: ClientRow[];
   teams: TeamRow[];
   disabled: boolean;
   geoReady: boolean;
   fleetReady: boolean;
+  appleReady: boolean;
 }) {
   const [rows, setRows] = useState<ClientRow[]>(initial);
   return (
@@ -27,6 +29,7 @@ export default function MapView({
       disabled={disabled}
       geoReady={geoReady}
       fleetReady={fleetReady}
+      appleReady={appleReady}
       extras={(ctx) => <MapGpsTools ctx={ctx} />}
     />
   );

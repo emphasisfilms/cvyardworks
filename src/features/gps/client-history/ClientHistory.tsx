@@ -2,22 +2,28 @@
 
 // FEATURE: client-history — fills the empty slot in a client pin's popup with
 // that client's GPS service history. Renders nothing itself.
+//
+// The map announces each opened client popup with a `cvy:client-popup` event
+// carrying the client id and the empty slot element; this listens for it.
 
 import { useEffect } from 'react';
-import type { MapCtx } from '../map-types';
 import { etDate, etTime, fmtMins } from '../shared';
 import { getClientHistoryAction } from './actions';
 
-export default function ClientHistory({ ctx }: { ctx: MapCtx }) {
+interface PopupDetail {
+  clientId: string;
+  slot: HTMLElement;
+  refresh: () => void; // re-measure the popup after its content grows
+}
+
+export default function ClientHistory() {
   useEffect(() => {
-    const { map } = ctx;
-    const onOpen = async (e: { popup: { getElement(): HTMLElement | undefined; update(): void } }) => {
-      const slot = e.popup.getElement()?.querySelector<HTMLElement>('.cvy-pop-extra[data-client]');
-      const id = slot?.dataset.client;
-      if (!slot || !id || slot.dataset.loaded) return;
+    const onOpen = async (ev: Event) => {
+      const { clientId, slot, refresh } = (ev as CustomEvent<PopupDetail>).detail;
+      if (slot.dataset.loaded) return;
       slot.dataset.loaded = '1';
       slot.innerHTML = '<small>Loading service history…</small>';
-      const res = await getClientHistoryAction(id);
+      const res = await getClientHistoryAction(clientId);
       if (!res.ok) {
         slot.innerHTML = '';
         return;
@@ -35,13 +41,11 @@ export default function ClientHistory({ ctx }: { ctx: MapCtx }) {
                  )
                  .join('')}</ul>
              </div>`;
-      e.popup.update(); // re-measure now that the popup is taller
+      refresh();
     };
-    map.on('popupopen', onOpen as never);
-    return () => {
-      map.off('popupopen', onOpen as never);
-    };
-  }, [ctx]);
+    document.addEventListener('cvy:client-popup', onOpen);
+    return () => document.removeEventListener('cvy:client-popup', onOpen);
+  }, []);
 
   return null;
 }

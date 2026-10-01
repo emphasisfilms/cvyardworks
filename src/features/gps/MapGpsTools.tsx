@@ -16,7 +16,7 @@ export default function MapGpsTools({ ctx }: { ctx: MapCtx }) {
       <Trails ctx={ctx} />          {/* feature: trails */}
       <Heat ctx={ctx} />            {/* feature: heat */}
       <Replay ctx={ctx} />          {/* feature: replay */}
-      <ClientHistory ctx={ctx} />   {/* feature: client-history (no button; fills client popups) */}
+      <ClientHistory />             {/* feature: client-history (no button; fills client popups) */}
     </div>
   );
 }

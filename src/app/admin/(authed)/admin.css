@@ -843,6 +843,8 @@ a.admin-stat:hover {
   font-family: inherit;
 }
 
+/* Name tag beside a pin (both map engines). */
+.cvy-label,
 .leaflet-tooltip.cvy-label {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--admin-border);
@@ -852,10 +854,76 @@ a.admin-stat:hover {
   font-weight: 600;
   color: var(--admin-text);
   box-shadow: none;
+  white-space: nowrap;
 }
 
 .leaflet-tooltip.cvy-label::before {
   display: none;
+}
+
+/* ---- Map engine: pins, labels and popups (src/lib/map-engine) ---- */
+
+/* Apple: the annotation box is half the pin's height so the pin centres on the point. */
+.mk-pin {
+  position: relative;
+  overflow: visible;
+  cursor: pointer;
+}
+
+.mk-pin-body,
+.mk-pin-leaflet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mk-pin-body {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.mk-pin-leaflet {
+  background: none;
+  border: none;
+}
+
+.mk-label {
+  position: absolute;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* A client's dot. */
+.cvy-pin-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* Apple popup bubble (Leaflet brings its own). */
+.mk-callout {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 190px;
+  max-width: 300px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text);
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+
+/* Details of a tapped line or circle (Apple has no hover tooltips for shapes). */
+.cvy-map-info {
+  padding: 8px 14px;
+  border-top: 1px solid var(--admin-border);
+  background: var(--admin-bg-inset);
+  font-size: 0.85rem;
 }
 
 .cvy-pop {
@@ -921,6 +989,26 @@ a.admin-stat:hover {
 }
 
 /* feature: replay */
+.gps-stop-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  opacity: 0.88;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.gps-replay-truck {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #16211a;
+  border: 3px solid #ffffff;
+  box-sizing: border-box;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+
 .gps-replay {
   display: flex;
   flex-wrap: wrap;

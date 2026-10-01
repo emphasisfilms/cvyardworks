@@ -4,7 +4,7 @@
 // Everything it draws lives in its own layer and is removed when closed.
 
 import { useEffect, useRef, useState } from 'react';
-import type * as Leaflet from 'leaflet';
+import type { LineHandle, PinHandle } from '@/lib/map-engine';
 import type { MapCtx } from '../map-types';
 import { esc, etTime, etToday, fmtMins } from '../shared';
 import { getReplayAction, listReplayVehiclesAction, type ReplayData } from './actions';
@@ -29,9 +29,8 @@ export default function Replay({ ctx }: { ctx: MapCtx }) {
   const [rate, setRate] = useState(SPEEDS[1].rate);
   const [clock, setClock] = useState(0); // simulated time, epoch ms
 
-  const group = useRef<Leaflet.LayerGroup | null>(null);
-  const marker = useRef<Leaflet.CircleMarker | null>(null);
-  const done = useRef<Leaflet.Polyline | null>(null);
+  const marker = useRef<PinHandle | null>(null); // the truck
+  const done = useRef<LineHandle | null>(null); // the part of the route already driven
 
   // Truck list, once, when the panel first opens.
   useEffect(() => {
@@ -45,37 +44,35 @@ export default function Replay({ ctx }: { ctx: MapCtx }) {
   // Draw the day when data arrives; clean up when it changes or the panel closes.
   useEffect(() => {
     if (!open || !data || data.points.length === 0) return;
-    const { map, L } = ctx;
-    const g = L.layerGroup().addTo(map);
-    group.current = g;
+    const g = ctx.engine.layer();
     const latlngs = data.points.map((p) => [p.lat, p.lng] as [number, number]);
-    L.polyline(latlngs, { color: '#1f6fb2', weight: 3, opacity: 0.3 }).addTo(g);
-    done.current = L.polyline([], { color: '#1f6fb2', weight: 4, opacity: 0.9 }).addTo(g);
+    g.line(latlngs, { color: '#1f6fb2', weight: 3, opacity: 0.3 });
+    done.current = g.line([latlngs[0], latlngs[0]], { color: '#1f6fb2', weight: 4, opacity: 0.9 });
     for (const s of data.stops) {
-      L.circleMarker([s.lat, s.lng], {
-        radius: Math.min(16, 5 + Math.sqrt(s.minutes ?? 4)),
-        color: '#ffffff',
-        weight: 2,
-        fillColor: STOP_COLORS[s.kind] ?? STOP_COLORS.other,
-        fillOpacity: 0.85,
-      })
-        .bindTooltip(
-          `<strong>${esc(s.label)}</strong><br>${etTime(s.arrived)} – ${s.departed ? etTime(s.departed) : 'still there'} · ${fmtMins(s.minutes)}`
-        )
-        .addTo(g);
+      const size = Math.round(Math.min(32, 10 + 2 * Math.sqrt(s.minutes ?? 4)));
+      g.pin({
+        lat: s.lat,
+        lng: s.lng,
+        size,
+        html: `<span class="gps-stop-dot" style="background:${STOP_COLORS[s.kind] ?? STOP_COLORS.other}"></span>`,
+        label: `${s.label} · ${fmtMins(s.minutes)}`,
+        popup: () =>
+          `<div class="cvy-pop"><strong>${esc(s.label)}</strong><br>${etTime(s.arrived)} – ${
+            s.departed ? etTime(s.departed) : 'still there'
+          } · ${fmtMins(s.minutes)}</div>`,
+      });
     }
-    marker.current = L.circleMarker(latlngs[0], {
-      radius: 8,
-      color: '#ffffff',
-      weight: 3,
-      fillColor: '#16211a',
-      fillOpacity: 1,
-    }).addTo(g);
-    map.fitBounds(L.latLngBounds(latlngs).pad(0.15), { maxZoom: 15 });
+    marker.current = g.pin({
+      lat: latlngs[0][0],
+      lng: latlngs[0][1],
+      size: 18,
+      z: 2000,
+      html: '<span class="gps-replay-truck"></span>',
+    });
+    ctx.engine.fit(latlngs, 15);
 
     return () => {
       g.remove();
-      group.current = null;
       marker.current = null;
       done.current = null;
     };
@@ -91,8 +88,8 @@ export default function Replay({ ctx }: { ctx: MapCtx }) {
     const b = pts[Math.min(i + 1, pts.length - 1)];
     const f = b.t > a.t ? Math.min(1, Math.max(0, (clock - a.t) / (b.t - a.t))) : 0;
     const pos: [number, number] = [a.lat + (b.lat - a.lat) * f, a.lng + (b.lng - a.lng) * f];
-    marker.current.setLatLng(pos);
-    done.current.setLatLngs([...pts.slice(0, i + 1).map((p) => [p.lat, p.lng] as [number, number]), pos]);
+    marker.current.move(pos[0], pos[1]);
+    done.current.setPoints([...pts.slice(0, i + 1).map((p) => [p.lat, p.lng] as [number, number]), pos]);
   }, [clock, data]);
 
   // The clock ticks while playing.

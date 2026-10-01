@@ -2,9 +2,9 @@
 
 // FEATURE: trails — toggle that draws each truck's route so far today.
 
-import { useEffect, useRef, useState } from 'react';
-import type * as Leaflet from 'leaflet';
+import { useEffect, useState } from 'react';
 import type { MapCtx } from '../map-types';
+import { esc } from '../shared';
 import { teamColor } from '@/lib/team-colors';
 import { getTrailsAction } from './actions';
 
@@ -14,25 +14,20 @@ const PALETTE = ['#1f6fb2', '#d97706', '#8e44ad', '#c0392b', '#0e8a83', '#b5651d
 export default function Trails({ ctx }: { ctx: MapCtx }) {
   const [on, setOn] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const layer = useRef<Leaflet.LayerGroup | null>(null);
 
   useEffect(() => {
-    const { map, L } = ctx;
     if (!on) return;
-    const group = L.layerGroup().addTo(map);
-    layer.current = group;
+    const layer = ctx.engine.layer();
     let cancelled = false;
 
     const load = async () => {
       const res = await getTrailsAction();
       if (cancelled) return;
       if (!res.ok) return setNote(res.error);
-      group.clearLayers();
+      layer.clear();
       res.trails.forEach((t, i) => {
         const color = t.team ? teamColor(t.team) : PALETTE[i % PALETTE.length];
-        L.polyline(t.points, { color, weight: 3, opacity: 0.75 })
-          .bindTooltip(t.name, { sticky: true })
-          .addTo(group);
+        layer.line(t.points, { color, weight: 3, opacity: 0.75 }, `<strong>${esc(t.name)}</strong> · today’s route`);
       });
       setNote(res.trails.length ? `${res.trails.length} trucks out today` : 'No movement yet today');
     };
@@ -42,8 +37,7 @@ export default function Trails({ ctx }: { ctx: MapCtx }) {
     return () => {
       cancelled = true;
       clearInterval(timer);
-      group.remove();
-      layer.current = null;
+      layer.remove();
     };
   }, [on, ctx]);
 

@@ -12,9 +12,8 @@ export default function Heat({ ctx }: { ctx: MapCtx }) {
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
-    const { map, L } = ctx;
     if (!on) return;
-    const group = L.layerGroup().addTo(map);
+    const layer = ctx.engine.layer();
     let cancelled = false;
 
     (async () => {
@@ -24,23 +23,20 @@ export default function Heat({ ctx }: { ctx: MapCtx }) {
       const max = Math.max(1, ...res.spots.map((s) => s.minutes));
       for (const s of res.spots) {
         const share = Math.sqrt(s.minutes / max); // area, not radius, tracks time
-        L.circle([s.lat, s.lng], {
-          radius: 60 + share * 420, // metres
-          color: '#c0392b',
-          weight: 1,
-          opacity: 0.5,
-          fillColor: '#e4572e',
-          fillOpacity: 0.12 + share * 0.4,
-        })
-          .bindTooltip(`${s.label ? `${esc(s.label)}<br>` : ''}<strong>${fmtMins(s.minutes)}</strong> over ${s.visits} stop${s.visits === 1 ? '' : 's'}`)
-          .addTo(group);
+        layer.circle(
+          s.lat,
+          s.lng,
+          60 + share * 420, // metres
+          { color: '#c0392b', weight: 1, opacity: 0.5, fillColor: '#e4572e', fillOpacity: 0.12 + share * 0.4 },
+          `${s.label ? `${esc(s.label)} · ` : ''}<strong>${fmtMins(s.minutes)}</strong> over ${s.visits} stop${s.visits === 1 ? '' : 's'}`
+        );
       }
       setNote(`${res.spots.length} places`);
     })();
 
     return () => {
       cancelled = true;
-      group.remove();
+      layer.remove();
     };
   }, [on, ctx]);
 

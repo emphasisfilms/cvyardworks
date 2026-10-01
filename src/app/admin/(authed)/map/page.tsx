@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { fleetLocateReady } from '@/lib/fleetlocate';
+import { appleMapsReady } from '@/lib/apple-maps';
 import { loadClientsAndTeams } from '../clients/load';
 import MapView from './MapView';
 
@@ -30,7 +31,14 @@ export default async function AdminMapPage() {
         </div>
       )}
 
-      <MapView initial={clients} teams={teams} disabled={!!error} geoReady={geoReady} fleetReady={fleetReady} />
+      <MapView
+        initial={clients}
+        teams={teams}
+        disabled={!!error}
+        geoReady={geoReady}
+        fleetReady={fleetReady}
+        appleReady={appleMapsReady()}
+      />
     </>
   );
 }

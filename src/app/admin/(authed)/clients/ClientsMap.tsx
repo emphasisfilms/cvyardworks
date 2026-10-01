@@ -1,10 +1,13 @@
 'use client';
 
+// The admin map: client pins colored by team, live trucks, address lookup and
+// hand-placed pins. Draws through the engine-neutral layer in src/lib/map-engine
+// (Apple Maps, with an OpenStreetMap fallback), never a map library directly.
+
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import type * as Leaflet from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { CLIENT_DAYS, type ClientRow, type TeamRow } from '@/lib/supabase/content-types';
 import { teamColor, UNASSIGNED_COLOR } from '@/lib/team-colors';
+import { createEngine, type MapEngine, type MapLayer } from '@/lib/map-engine';
 import { geocodeMissingAction, getFleetPositionsAction, setClientPinAction } from './actions';
 import type { FleetAsset } from '@/lib/fleetlocate';
 import type { MapCtx } from '@/features/gps/map-types';
@@ -25,6 +28,9 @@ const TRUCK_COLORS: Record<FleetAsset['status'], string> = {
   Stopped: '#4b5563',
   Unknown: '#9aa5a0',
 };
+
+const TRUCK_SVG =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="#fff" aria-hidden="true"><path d="M2 6h11v9H2zM13 9h4l3 3v3h-7zM6 19a2 2 0 100-4 2 2 0 000 4zm11 0a2 2 0 100-4 2 2 0 000 4z"/></svg>';
 
 function ago(iso: string | null): string {
   if (!iso) return 'unknown';
@@ -48,6 +54,7 @@ export default function ClientsMap({
   disabled,
   geoReady,
   fleetReady,
+  appleReady,
   extras,
 }: {
   rows: ClientRow[];
@@ -56,14 +63,13 @@ export default function ClientsMap({
   disabled: boolean;
   geoReady: boolean;
   fleetReady: boolean;
+  appleReady: boolean; // Apple Maps keys are present on the server
   // Optional add-on tools drawn above the map. They get the live map to draw on.
   extras?: (ctx: MapCtx) => ReactNode;
 }) {
   const mapEl = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Leaflet.Map | null>(null);
-  const layerRef = useRef<Leaflet.LayerGroup | null>(null);
-  const truckLayerRef = useRef<Leaflet.LayerGroup | null>(null);
-  const LRef = useRef<typeof Leaflet | null>(null);
+  const clientLayer = useRef<MapLayer | null>(null);
+  const truckLayer = useRef<MapLayer | null>(null);
 
   const [day, setDay] = useState<string>('');
   const [team, setTeam] = useState<string>('');
@@ -73,14 +79,13 @@ export default function ClientsMap({
   const [geocoding, setGeocoding] = useState(false);
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
   const [placing, setPlacing] = useState<ClientRow | null>(null);
-  const [ready, setReady] = useState(false); // flips once Leaflet has built the map
-  const [ctx, setCtx] = useState<MapCtx | null>(null); // handed to `extras`
+  const [engine, setEngine] = useState<MapEngine | null>(null); // set once the map exists
+  const [engineNote, setEngineNote] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null); // tapped line / circle (Apple)
   const [showTrucks, setShowTrucks] = useState(true);
   const [trucks, setTrucks] = useState<FleetAsset[]>([]);
   const [truckMsg, setTruckMsg] = useState<string | null>(null);
   const [truckTime, setTruckTime] = useState<string | null>(null);
-  const placingRef = useRef<ClientRow | null>(null);
-  placingRef.current = placing;
 
   const teamName = useMemo(() => {
     const m = new Map<string, string>();
@@ -107,65 +112,50 @@ export default function ClientsMap({
   // Create the map once.
   useEffect(() => {
     let cancelled = false;
+    let made: MapEngine | null = null;
     (async () => {
-      const L = (await import('leaflet')).default;
-      if (cancelled || !mapEl.current || mapRef.current) return;
-      LRef.current = L;
-      const map = L.map(mapEl.current, { center: HOME, zoom: 11, scrollWheelZoom: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
-      layerRef.current = L.layerGroup().addTo(map);
-      truckLayerRef.current = L.layerGroup().addTo(map);
-      map.on('click', async (e: Leaflet.LeafletMouseEvent) => {
-        const target = placingRef.current;
-        if (!target) return;
-        setPlacing(null);
-        const res = await setClientPinAction(target.id, e.latlng.lat, e.latlng.lng);
-        if (res.ok) {
-          setRows((rs) =>
-            rs.map((r) => (r.id === target.id ? { ...r, lat: e.latlng.lat, lng: e.latlng.lng, geocode_status: 'manual' } : r))
-          );
-          setGeoMsg(`Pin placed for ${target.name}.`);
-        } else {
-          setGeoMsg(`Couldn’t save pin: ${res.error}`);
-        }
-      });
-      mapRef.current = map;
-      setTimeout(() => map.invalidateSize(), 50);
-      setReady(true);
-      setCtx({ map, L });
+      if (!mapEl.current) return;
+      const { engine: e, note } = await createEngine(mapEl.current, { apple: appleReady, center: HOME, onInfo: setInfo });
+      if (cancelled) return e.destroy();
+      made = e;
+      clientLayer.current = e.layer();
+      truckLayer.current = e.layer();
+      setEngineNote(note);
+      setEngine(e);
     })();
     return () => {
       cancelled = true;
-      mapRef.current?.remove();
-      mapRef.current = null;
-      layerRef.current = null;
-      truckLayerRef.current = null;
-      setReady(false);
-      setCtx(null);
+      made?.destroy();
+      clientLayer.current = null;
+      truckLayer.current = null;
+      setEngine(null);
     };
-  }, [setRows]);
+  }, [appleReady]);
 
-  // Redraw pins whenever the data or filters change (and once the map is ready).
+  // While "Place pin" is active, the next click on the map sets that client's pin.
   useEffect(() => {
-    if (!ready) return;
-    const L = LRef.current;
-    const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!L || !map || !layer) return;
-    layer.clearLayers();
-    const pts: Leaflet.LatLngExpression[] = [];
+    if (!engine || !placing) return;
+    const target = placing;
+    return engine.onClick(async (lat, lng) => {
+      setPlacing(null);
+      const res = await setClientPinAction(target.id, lat, lng);
+      if (res.ok) {
+        setRows((rs) => rs.map((r) => (r.id === target.id ? { ...r, lat, lng, geocode_status: 'manual' } : r)));
+        setGeoMsg(`Pin placed for ${target.name}.`);
+      } else {
+        setGeoMsg(`Couldn’t save pin: ${res.error}`);
+      }
+    });
+  }, [engine, placing, setRows]);
+
+  // Redraw client pins whenever the data or filters change.
+  useEffect(() => {
+    const layer = clientLayer.current;
+    if (!engine || !layer) return;
+    layer.clear();
+    const pts: [number, number][] = [];
     for (const r of visible) {
       const color = r.active ? teamColor(r.current_team) : UNASSIGNED_COLOR;
-      const m = L.circleMarker([r.lat!, r.lng!], {
-        radius: 9,
-        color: '#ffffff',
-        weight: 2,
-        fillColor: color,
-        fillOpacity: r.active ? 0.95 : 0.5,
-      });
       const teamLabel = r.current_team ? teamName.get(r.current_team) ?? `Team ${r.current_team}` : 'No team';
       const flags = [
         [r.mow ? 'Mow' : null, r.plow ? 'Plow' : null].filter(Boolean).join(' + ') || 'No services',
@@ -175,27 +165,31 @@ export default function ClientsMap({
         r.sander ? 'Sander' : null,
         r.geocode_status === 'manual' ? 'Pin placed by hand' : null,
         !r.active ? 'Inactive' : null,
-      ].filter(Boolean);
-      m.bindPopup(
-        `<div class="cvy-pop">
-          <strong>${esc(r.name)}</strong><br>${esc(r.address)}<br>
-          <span style="color:${color};font-weight:600">${esc(teamLabel)}</span> · ${r.current_day ?? 'No day'} · ${fmtMins(r.service_minutes)}
-          ${flags.length ? `<br><small>${flags.map(esc as (s: string | null) => string).join(' · ')}</small>` : ''}
-          <div class="cvy-pop-extra" data-client="${r.id}"></div>
-        </div>`
-      );
-      if (labels) {
-        m.bindTooltip(r.name, { permanent: true, direction: 'right', offset: [10, 0], className: 'cvy-label' });
-      } else {
-        m.bindTooltip(r.name, { direction: 'top' });
-      }
-      m.addTo(layer);
+      ].filter((f): f is string => !!f);
+      layer.pin({
+        lat: r.lat!,
+        lng: r.lng!,
+        size: 20,
+        html: `<span class="cvy-pin-dot" style="background:${color};opacity:${r.active ? 1 : 0.55}"></span>`,
+        label: r.name,
+        labelShown: labels,
+        popup: () =>
+          `<div class="cvy-pop">
+            <strong>${esc(r.name)}</strong><br>${esc(r.address)}<br>
+            <span style="color:${color};font-weight:600">${esc(teamLabel)}</span> · ${r.current_day ?? 'No day'} · ${fmtMins(r.service_minutes)}
+            ${flags.length ? `<br><small>${flags.map(esc).join(' · ')}</small>` : ''}
+            <div class="cvy-pop-extra" data-client="${r.id}"></div>
+          </div>`,
+        // Lets add-ons (e.g. the client-history feature) fill the empty slot.
+        onPopup: (el, refresh) => {
+          const slot = el.querySelector<HTMLElement>('.cvy-pop-extra');
+          if (slot) document.dispatchEvent(new CustomEvent('cvy:client-popup', { detail: { clientId: r.id, slot, refresh } }));
+        },
+      });
       pts.push([r.lat!, r.lng!]);
     }
-    if (pts.length) {
-      map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 15 });
-    }
-  }, [ready, visible, labels, teamName]);
+    engine.fit(pts, 15);
+  }, [engine, visible, labels, teamName]);
 
   // Live trucks from FleetLocate: load when the map opens, refresh every minute.
   useEffect(() => {
@@ -222,34 +216,32 @@ export default function ClientsMap({
 
   // Draw trucks on their own layer so refreshing them never moves the view.
   useEffect(() => {
-    if (!ready) return;
-    const L = LRef.current;
-    const layer = truckLayerRef.current;
-    if (!L || !layer) return;
-    layer.clearLayers();
+    const layer = truckLayer.current;
+    if (!engine || !layer) return;
+    layer.clear();
     if (!showTrucks) return;
     for (const t of trucks) {
       if (t.lat == null || t.lng == null) continue;
       const color = TRUCK_COLORS[t.status];
-      const icon = L.divIcon({
-        className: 'cvy-truck',
-        html: `<span class="cvy-truck-box" style="background:${color}"><svg viewBox="0 0 24 24" width="15" height="15" fill="#fff" aria-hidden="true"><path d="M2 6h11v9H2zM13 9h4l3 3v3h-7zM6 19a2 2 0 100-4 2 2 0 000 4zm11 0a2 2 0 100-4 2 2 0 000 4z"/></svg></span>`,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
+      layer.pin({
+        lat: t.lat,
+        lng: t.lng,
+        size: 26,
+        z: 1000,
+        html: `<span class="cvy-truck-box" style="background:${color}">${TRUCK_SVG}</span>`,
+        label: t.name,
+        labelShown: labels,
+        labelClass: 'cvy-label-truck',
+        popup: () =>
+          `<div class="cvy-pop">
+            <strong>${esc(t.name)}</strong>${t.vehicle ? `<br>${esc(t.vehicle)}` : ''}<br>
+            <span style="color:${color};font-weight:600">${t.status}</span>${t.status === 'Moving' && t.speed != null ? ` · ${t.speed} mph` : ''}
+            ${t.address ? `<br>${esc(t.address)}` : ''}
+            <br><small>Reported ${ago(t.lastReported)}</small>
+          </div>`,
       });
-      const m = L.marker([t.lat, t.lng], { icon, zIndexOffset: 1000 });
-      m.bindTooltip(t.name, { permanent: labels, direction: 'top', offset: [0, -14], className: 'cvy-label cvy-label-truck' });
-      m.bindPopup(
-        `<div class="cvy-pop">
-          <strong>${esc(t.name)}</strong>${t.vehicle ? `<br>${esc(t.vehicle)}` : ''}<br>
-          <span style="color:${color};font-weight:600">${t.status}</span>${t.status === 'Moving' && t.speed != null ? ` · ${t.speed} mph` : ''}
-          ${t.address ? `<br>${esc(t.address)}` : ''}
-          <br><small>Reported ${ago(t.lastReported)}</small>
-        </div>`
-      );
-      m.addTo(layer);
     }
-  }, [ready, trucks, showTrucks, labels]);
+  }, [engine, trucks, showTrucks, labels]);
 
   // Look up any un-pinned addresses automatically when the map opens.
   const autoRan = useRef(false);
@@ -260,12 +252,6 @@ export default function ClientsMap({
     runGeocode(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoReady, disabled, missing.length]);
-
-  // Leaflet needs a nudge when its container appears after being hidden.
-  useEffect(() => {
-    const t = setTimeout(() => mapRef.current?.invalidateSize(), 100);
-    return () => clearTimeout(t);
-  });
 
   async function runGeocode(retryFailed: boolean) {
     setGeocoding(true);
@@ -296,6 +282,7 @@ export default function ClientsMap({
   const teamsInUse = Array.from(new Set(rows.map((r) => r.current_team).filter(Boolean) as string[])).sort(
     (a, b) => parseInt(a, 10) - parseInt(b, 10)
   );
+  const ctx = useMemo<MapCtx | null>(() => (engine ? { engine } : null), [engine]);
 
   return (
     <>
@@ -305,6 +292,7 @@ export default function ClientsMap({
           <code>supabase/migrations/007_clients_geo.sql</code> once, then reload.
         </div>
       )}
+      {engineNote && <div className="admin-notice">{engineNote}</div>}
 
       <div className="admin-toolbar">
         <select className="admin-select" value={service} onChange={(e) => setService(e.target.value as '' | 'mow' | 'plow')} style={{ width: 150 }}>
@@ -328,23 +316,22 @@ export default function ClientsMap({
             </option>
           ))}
         </select>
-        <label className="admin-field-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-          <input type="checkbox" className="admin-check" style={{ width: 15, height: 15 }} checked={labels} onChange={(e) => setLabels(e.target.checked)} />
+        <label className="admin-field-hint gps-toggle">
+          <input type="checkbox" className="admin-check" checked={labels} onChange={(e) => setLabels(e.target.checked)} />
           Names
         </label>
-        <label className="admin-field-hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-          <input type="checkbox" className="admin-check" style={{ width: 15, height: 15 }} checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+        <label className="admin-field-hint gps-toggle">
+          <input type="checkbox" className="admin-check" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
           Inactive
         </label>
         <label
-          className="admin-field-hint"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: fleetReady ? 'pointer' : 'not-allowed' }}
+          className="admin-field-hint gps-toggle"
+          style={{ cursor: fleetReady ? 'pointer' : 'not-allowed' }}
           title={fleetReady ? 'Live truck positions from FleetLocate' : 'FleetLocate is not connected yet (see Dashboard)'}
         >
           <input
             type="checkbox"
             className="admin-check"
-            style={{ width: 15, height: 15 }}
             checked={showTrucks && fleetReady}
             disabled={!fleetReady}
             onChange={(e) => setShowTrucks(e.target.checked)}
@@ -396,6 +383,8 @@ export default function ClientsMap({
 
       <div className="cvy-map-wrap">
         <div ref={mapEl} className="cvy-map" style={placing ? { cursor: 'crosshair' } : undefined} />
+        {/* Apple has no hover tooltips on lines and circles: a tapped shape's details show here. */}
+        {info && <div className="cvy-map-info" dangerouslySetInnerHTML={{ __html: info }} />}
         <div className="cvy-legend">
           {teamsInUse.map((t) => (
             <span key={t} className="cvy-legend-item">
