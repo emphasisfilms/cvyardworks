@@ -865,3 +865,31 @@ a.admin-stat:hover {
 .cvy-pop small {
   color: var(--admin-text-muted);
 }
+
+/* ---- Truck markers (FleetLocate) ---- */
+
+.cvy-truck {
+  background: none;
+  border: none;
+}
+
+.cvy-truck-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.leaflet-tooltip.cvy-label-truck {
+  background: #16211a;
+  color: #ffffff;
+  border-color: #16211a;
+}
+
+.cvy-dot-sq {
+  border-radius: 3px;
+}

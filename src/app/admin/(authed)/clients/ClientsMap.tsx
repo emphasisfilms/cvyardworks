@@ -5,7 +5,8 @@ import type * as Leaflet from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CLIENT_DAYS, type ClientRow, type TeamRow } from '@/lib/supabase/content-types';
 import { teamColor, UNASSIGNED_COLOR } from '@/lib/team-colors';
-import { geocodeMissingAction, setClientPinAction } from './actions';
+import { geocodeMissingAction, getFleetPositionsAction, setClientPinAction } from './actions';
+import type { FleetAsset } from '@/lib/fleetlocate';
 
 // Walpole, NH — where the map opens when there are no pins yet.
 const HOME: [number, number] = [43.0743, -72.4262];
@@ -15,6 +16,24 @@ function fmtMins(m: number | null): string {
   const h = Math.floor(m / 60);
   const r = m % 60;
   return h ? `${h}h ${r ? `${r}m` : ''}`.trim() : `${r}m`;
+}
+
+const TRUCK_COLORS: Record<FleetAsset['status'], string> = {
+  Moving: '#2f7a3e',
+  Idle: '#d97706',
+  Stopped: '#4b5563',
+  Unknown: '#9aa5a0',
+};
+
+function ago(iso: string | null): string {
+  if (!iso) return 'unknown';
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(mins)) return 'unknown';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 48) return `${h} hr ago`;
+  return `${Math.round(h / 24)} days ago`;
 }
 
 function esc(s: string): string {
@@ -27,16 +46,19 @@ export default function ClientsMap({
   teams,
   disabled,
   geoReady,
+  fleetReady,
 }: {
   rows: ClientRow[];
   setRows: Dispatch<SetStateAction<ClientRow[]>>;
   teams: TeamRow[];
   disabled: boolean;
   geoReady: boolean;
+  fleetReady: boolean;
 }) {
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
   const layerRef = useRef<Leaflet.LayerGroup | null>(null);
+  const truckLayerRef = useRef<Leaflet.LayerGroup | null>(null);
   const LRef = useRef<typeof Leaflet | null>(null);
 
   const [day, setDay] = useState<string>('');
@@ -48,6 +70,10 @@ export default function ClientsMap({
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
   const [placing, setPlacing] = useState<ClientRow | null>(null);
   const [ready, setReady] = useState(false); // flips once Leaflet has built the map
+  const [showTrucks, setShowTrucks] = useState(true);
+  const [trucks, setTrucks] = useState<FleetAsset[]>([]);
+  const [truckMsg, setTruckMsg] = useState<string | null>(null);
+  const [truckTime, setTruckTime] = useState<string | null>(null);
   const placingRef = useRef<ClientRow | null>(null);
   placingRef.current = placing;
 
@@ -86,6 +112,7 @@ export default function ClientsMap({
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
       layerRef.current = L.layerGroup().addTo(map);
+      truckLayerRef.current = L.layerGroup().addTo(map);
       map.on('click', async (e: Leaflet.LeafletMouseEvent) => {
         const target = placingRef.current;
         if (!target) return;
@@ -109,6 +136,7 @@ export default function ClientsMap({
       mapRef.current?.remove();
       mapRef.current = null;
       layerRef.current = null;
+      truckLayerRef.current = null;
       setReady(false);
     };
   }, [setRows]);
@@ -160,6 +188,60 @@ export default function ClientsMap({
       map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 15 });
     }
   }, [ready, visible, labels, teamName]);
+
+  // Live trucks from FleetLocate: load when the map opens, refresh every minute.
+  useEffect(() => {
+    if (!fleetReady || !showTrucks) return;
+    let cancelled = false;
+    const load = async () => {
+      const res = await getFleetPositionsAction();
+      if (cancelled) return;
+      if (res.ok) {
+        setTrucks(res.assets);
+        setTruckTime(res.fetchedAt);
+        setTruckMsg(null);
+      } else {
+        setTruckMsg(res.error);
+      }
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [fleetReady, showTrucks]);
+
+  // Draw trucks on their own layer so refreshing them never moves the view.
+  useEffect(() => {
+    if (!ready) return;
+    const L = LRef.current;
+    const layer = truckLayerRef.current;
+    if (!L || !layer) return;
+    layer.clearLayers();
+    if (!showTrucks) return;
+    for (const t of trucks) {
+      if (t.lat == null || t.lng == null) continue;
+      const color = TRUCK_COLORS[t.status];
+      const icon = L.divIcon({
+        className: 'cvy-truck',
+        html: `<span class="cvy-truck-box" style="background:${color}"><svg viewBox="0 0 24 24" width="15" height="15" fill="#fff" aria-hidden="true"><path d="M2 6h11v9H2zM13 9h4l3 3v3h-7zM6 19a2 2 0 100-4 2 2 0 000 4zm11 0a2 2 0 100-4 2 2 0 000 4z"/></svg></span>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+      const m = L.marker([t.lat, t.lng], { icon, zIndexOffset: 1000 });
+      m.bindTooltip(t.name, { permanent: labels, direction: 'top', offset: [0, -14], className: 'cvy-label cvy-label-truck' });
+      m.bindPopup(
+        `<div class="cvy-pop">
+          <strong>${esc(t.name)}</strong>${t.vehicle ? `<br>${esc(t.vehicle)}` : ''}<br>
+          <span style="color:${color};font-weight:600">${t.status}</span>${t.status === 'Moving' && t.speed != null ? ` · ${t.speed} mph` : ''}
+          ${t.address ? `<br>${esc(t.address)}` : ''}
+          <br><small>Reported ${ago(t.lastReported)}</small>
+        </div>`
+      );
+      m.addTo(layer);
+    }
+  }, [ready, trucks, showTrucks, labels]);
 
   // Look up any un-pinned addresses automatically when the map opens.
   const autoRan = useRef(false);
@@ -246,6 +328,22 @@ export default function ClientsMap({
           <input type="checkbox" className="admin-check" style={{ width: 15, height: 15 }} checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
           Inactive
         </label>
+        <label
+          className="admin-field-hint"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: fleetReady ? 'pointer' : 'not-allowed' }}
+          title={fleetReady ? 'Live truck positions from FleetLocate' : 'FleetLocate is not connected yet (see Dashboard)'}
+        >
+          <input
+            type="checkbox"
+            className="admin-check"
+            style={{ width: 15, height: 15 }}
+            checked={showTrucks && fleetReady}
+            disabled={!fleetReady}
+            onChange={(e) => setShowTrucks(e.target.checked)}
+          />
+          Trucks
+          {fleetReady && showTrucks && trucks.length > 0 && ` (${trucks.filter((t) => t.lat != null).length})`}
+        </label>
         <span className="spacer" />
         {(missing.length > 0 || failed.length > 0) && geoReady && (
           <>
@@ -269,6 +367,11 @@ export default function ClientsMap({
       </div>
 
       {geoMsg && <p className="admin-field-hint" style={{ marginBottom: 10 }}>{geoMsg}</p>}
+      {truckMsg && showTrucks && (
+        <p className="admin-field-hint" style={{ marginBottom: 10, color: 'var(--admin-danger)' }}>
+          Trucks: {truckMsg}
+        </p>
+      )}
 
       {placing && (
         <div className="admin-notice" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -296,8 +399,25 @@ export default function ClientsMap({
               No team
             </span>
           )}
+          {fleetReady && showTrucks && trucks.length > 0 && (
+            <>
+              <span className="cvy-legend-item">
+                <span className="cvy-dot cvy-dot-sq" style={{ background: TRUCK_COLORS.Moving }} />
+                Truck moving
+              </span>
+              <span className="cvy-legend-item">
+                <span className="cvy-dot cvy-dot-sq" style={{ background: TRUCK_COLORS.Idle }} />
+                idling
+              </span>
+              <span className="cvy-legend-item">
+                <span className="cvy-dot cvy-dot-sq" style={{ background: TRUCK_COLORS.Stopped }} />
+                stopped
+              </span>
+            </>
+          )}
           <span className="cvy-legend-item" style={{ marginLeft: 'auto' }}>
             {visible.length} pin{visible.length === 1 ? '' : 's'} shown
+            {truckTime && showTrucks ? ` · trucks updated ${ago(truckTime)}` : ''}
           </span>
         </div>
       </div>

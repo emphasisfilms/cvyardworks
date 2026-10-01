@@ -13,11 +13,13 @@ export default function ClientsView({
   teams,
   disabled,
   geoReady,
+  fleetReady,
 }: {
   initial: ClientRow[];
   teams: TeamRow[];
   disabled: boolean;
   geoReady: boolean;
+  fleetReady: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -60,7 +62,7 @@ export default function ClientsView({
       {view === 'table' ? (
         <ClientsTable initial={initial} rows={rows} setRows={setRows} teams={teams} disabled={disabled} />
       ) : (
-        <ClientsMap rows={rows} setRows={setRows} teams={teams} disabled={disabled} geoReady={geoReady} />
+        <ClientsMap rows={rows} setRows={setRows} teams={teams} disabled={disabled} geoReady={geoReady} fleetReady={fleetReady} />
       )}
     </>
   );

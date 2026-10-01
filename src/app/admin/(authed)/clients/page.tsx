@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { ClientRow, TeamRow } from '@/lib/supabase/content-types';
 import ClientsView from './ClientsView';
+import { fleetLocateReady } from '@/lib/fleetlocate';
 
 export const dynamic = 'force-dynamic';
 // Geocoding a batch of addresses takes a few seconds.
@@ -87,6 +88,7 @@ export default async function AdminClientsPage() {
         teams={teams}
         disabled={!!error}
         geoReady={!error && (data?.length === 0 || (data?.[0] !== undefined && 'lat' in data[0]))}
+        fleetReady={fleetLocateReady()}
       />
     </>
   );

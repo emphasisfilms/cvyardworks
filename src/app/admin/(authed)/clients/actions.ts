@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { CLIENT_DAYS, type ClientDay, type ClientRow, type ClientTeam } from '@/lib/supabase/content-types';
 import { geocodeAddress } from '@/lib/geocode';
+import { fetchFleetAssets, fleetLocateReady, type FleetAsset } from '@/lib/fleetlocate';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -141,4 +142,23 @@ export async function deleteClientAction(id: string): Promise<Result> {
   const { error } = await supabase.from('cvy_clients').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+
+export type FleetPositions =
+  | { ok: true; assets: FleetAsset[]; fetchedAt: string }
+  | { ok: false; error: string };
+
+// Live truck positions straight from Spireon FleetLocate (not stored).
+export async function getFleetPositionsAction(): Promise<FleetPositions> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in' };
+  if (!fleetLocateReady()) return { ok: false, error: 'FleetLocate credentials are not set on Vercel yet.' };
+  try {
+    const assets = await fetchFleetAssets();
+    return { ok: true, assets, fetchedAt: new Date().toISOString() };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }
