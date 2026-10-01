@@ -19,6 +19,7 @@ const TABS: Tab[] = [
   { href: '/admin/estimate', label: 'Estimate Page' },
   { href: '/admin/settings', label: 'Site Settings' },
   { href: '/admin/clients', label: 'Clients & Routes' },
+  { href: '/admin/map', label: 'Map' },
   { href: '/admin/teams', label: 'Crews & Teams' },
 ];
 
@@ -80,7 +81,9 @@ export default function AdminShell({
 
       <main
         className={`admin-main${
-          pathname.startsWith('/admin/clients') || pathname.startsWith('/admin/teams')
+          pathname.startsWith('/admin/clients') ||
+          pathname.startsWith('/admin/teams') ||
+          pathname.startsWith('/admin/map')
             ? ' admin-main-wide'
             : ''
         }`}

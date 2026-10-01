@@ -375,7 +375,7 @@ export default function ClientsTable({
                     disabled={disabled}
                     title={
                       r.geocode_status === 'failed'
-                        ? 'Address not found on the map — check the spelling, or drop a pin on the Map tab'
+                        ? 'Address not found on the map — check the spelling, or place the pin by hand on the Map page'
                         : undefined
                     }
                     style={r.geocode_status === 'failed' ? { borderColor: 'var(--admin-warn)' } : undefined}

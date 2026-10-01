@@ -807,8 +807,9 @@ a.admin-stat:hover {
 }
 
 .cvy-map {
-  height: min(72vh, 760px);
-  min-height: 420px;
+  /* The map has its own page now: fill the window below the header and toolbar. */
+  height: calc(100vh - 250px);
+  min-height: 460px;
   width: 100%;
   background: #e9eeea;
 }

@@ -426,7 +426,7 @@ export default function ClientsMap({
         <section className="admin-card" style={{ marginTop: 16 }}>
           <h2 className="admin-card-title">Addresses not found</h2>
           <p className="admin-card-desc">
-            Fix the address on the Table tab and it will be looked up again, or place the pin by hand.
+            Fix the address on Clients &amp; Routes and it will be looked up again, or place the pin by hand.
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {failed.map((r) => (

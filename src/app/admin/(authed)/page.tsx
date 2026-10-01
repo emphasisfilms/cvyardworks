@@ -157,6 +157,7 @@ export default async function AdminDashboard() {
           <QuickLink href="/admin/estimate" label="Estimate page" hint="Benefits + heading" />
           <QuickLink href="/admin/settings" label="Site settings" hint="Phone, name, hours, social" />
           <QuickLink href="/admin/clients" label="Clients & routes" hint="Mowing schedule table" />
+          <QuickLink href="/admin/map" label="Map" hint="Client pins and live trucks" />
           <QuickLink href="/admin/teams" label="Crews & teams" hint="Leads, phones, baggers" />
         </div>
       </section>
